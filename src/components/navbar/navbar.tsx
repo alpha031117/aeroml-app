@@ -5,14 +5,14 @@ const NavBar = () => {
   return (
     <header className="w-full flex justify-between items-center px-6 py-4 bg-[#080609] shadow-md">
       {/* Logo + Title */}
-      <div className="flex items-center gap-3">
+      <Link href="/" className="flex items-center gap-3">
         <Image src="/images/aeroml-icon.png" alt="AeroML Logo" width={32} height={32} />
         <span className="text-white font-bold text-lg">AEROML</span>
-      </div>
+      </Link>
 
       {/* Call to Action */}
       <Link
-        href="/get-started"
+        href="/model-prompt"
         className="bg-white text-black px-4 py-2 rounded-md font-medium hover:bg-gray-200 transition"
       >
         Get Started
