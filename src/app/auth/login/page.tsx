@@ -70,7 +70,7 @@ const SignIn = () => {
             <input
               type="text"
               name="username"
-              placeholder="Username"
+              placeholder="Email address*"
               value={credentials.username}
               onChange={handleChange}
               className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -81,7 +81,7 @@ const SignIn = () => {
             <input
               type="password"
               name="password"
-              placeholder="Password"
+              placeholder="Password*"
               value={credentials.password}
               onChange={handleChange}
               className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -90,7 +90,7 @@ const SignIn = () => {
 
           <button
             type="submit"
-            className="w-full p-3 bg-white text-black rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
+            className="w-full p-3 bg-white text-black rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4 cursor-pointer"
           >
             Sign In
           </button>
@@ -114,7 +114,7 @@ const SignIn = () => {
             <button
               key={provider.name}
               onClick={() => signIn(provider.id, { callbackUrl: '/model-prompt' })}
-              className="w-full p-3 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 flex items-center justify-center gap-5"
+              className="w-full p-3 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 flex items-center justify-center gap-5 cursor-pointer"
             >
               {/* FontAwesome Google Icon */}
               {provider.name === "Google" && (

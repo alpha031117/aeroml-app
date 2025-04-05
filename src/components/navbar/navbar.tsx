@@ -57,7 +57,7 @@ const NavBar = () => {
         {!session ? (
           // If not logged in, show the "Get Started" button
           <Link href="/auth/login">
-            <button className="bg-white text-black px-4 py-2 rounded-md font-medium hover:bg-gray-200 transition">
+            <button className="bg-white text-black px-4 py-2 rounded-md font-medium hover:bg-gray-200 transition cursor-pointer">
               Get Started
             </button>
           </Link>

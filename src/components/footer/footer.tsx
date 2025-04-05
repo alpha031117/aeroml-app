@@ -10,9 +10,9 @@ const Footer = () => {
   
           {/* Right Section */}
           <div className="flex flex-col items-start sm:items-end gap-2 text-gray-200">
-            <a href="#" className="hover:text-pink-300 transition">Contact Us</a>
-            <a href="#" className="hover:text-pink-300 transition">Terms and Privacy</a>
-            <a href="#" className="hover:text-pink-300 transition">About Us</a>
+            <a href="#" className="hover:text-gray-400 transition">Contact Us</a>
+            <a href="#" className="hover:text-gray-400 transition">Terms and Privacy</a>
+            <a href="#" className="hover:text-gray-400 transition">About Us</a>
           </div>
         </div>
       </footer>
