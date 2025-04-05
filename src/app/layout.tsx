@@ -1,6 +1,10 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
+// src/app/layout.tsx
+import { getServerSession } from "next-auth";  // Import getServerSession
+import { authOptions } from "../pages/api/auth/[...nextauth]"; // Import your NextAuth options
+import ClientSessionWrapper from "../components/ClientSessionWrapper"; // Import the wrapper
+import { Geist, Geist_Mono } from 'next/font/google'; 
+import { Metadata } from "next";  // Import Metadata for SEO
+import "./globals.css";  // Import global styles
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -20,17 +24,22 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
+  const session = await getServerSession(authOptions);  // Fetch session
+
   return (
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        {/* Wrap children with ClientSessionWrapper */}
+        <ClientSessionWrapper session={session}>
+          {children}
+        </ClientSessionWrapper>
       </body>
     </html>
   );
