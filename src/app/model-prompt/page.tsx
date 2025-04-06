@@ -5,6 +5,8 @@ import Footer from "@/components/footer/footer";
 import NavBar from "@/components/navbar/navbar";
 import { PaperPlaneIcon } from "@radix-ui/react-icons";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
+import axios from 'axios'; // Import axios for making HTTP requests
+import { useRouter } from 'next/navigation'; // Import useRouter for navigation
 
 // Placeholder suggestions
 const suggestions = [
@@ -21,6 +23,24 @@ export default function ModelPrompt() {
   };
 
   const { ref, show } = useScrollReveal();
+  const router = useRouter(); // Initialize the router
+
+  const handleContinue = async () => {
+    try {
+        // Sending the POST request with the model input
+        const response = await axios.post('http://127.0.0.1:80/suggest-sources', {
+            modelInput: inputValue
+        });
+
+        console.log('Response from backend:', response.data);
+
+        // Passing the response (model input result) to the next page via state
+        router.push(`/dataset-selection?sourcesData=${encodeURIComponent(JSON.stringify(response.data.sources))}`);
+
+    } catch (error) {
+        console.error('Error sending input to backend:', error);
+    }
+  };
 
   return (
     <div className="flex flex-col min-h-screen overflow-y-hidden">
@@ -42,13 +62,17 @@ export default function ModelPrompt() {
               {/* Input + Button */}
               <div className="flex flex-col sm:flex-row items-center gap-4 mb-10">
                   <input
-                  type="text"
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}  // Allow text input
-                  placeholder="Tell us about the ideal output of your model..."
-                  className="w-full px-4 py-3 rounded-md bg-transparent border border-gray-600 text-white placeholder:text-gray-400 focus:outline-none"
+                    type="text"
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}  // Allow text input
+                    placeholder="Tell us about the ideal output of your model..."
+                    className="w-full px-4 py-3 rounded-md bg-transparent border border-gray-600 text-white placeholder:text-gray-400 focus:outline-none"
+                    required
                   />
-                  <button className="flex items-center gap-2 px-5 py-3 rounded-md bg-white text-black font-medium hover:bg-gray-200 transition whitespace-nowrap">
+                  <button 
+                  className="flex items-center gap-2 px-5 py-3 rounded-md bg-white text-black font-medium hover:bg-gray-200 transition whitespace-nowrap cursor-pointer"
+                  onClick={handleContinue}
+                  >
                   Continue <PaperPlaneIcon />
                   </button>
               </div>
