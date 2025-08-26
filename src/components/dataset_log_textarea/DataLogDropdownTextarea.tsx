@@ -3,17 +3,16 @@
 import { useState, useEffect } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { convertToArray } from '@/lib/utils';
 
 interface SourceItem {
-  "Source Name": string;
-  URL: string;
+  source: string;
+  url: string;
   topic?: string;
 }
 
 interface SourcesLogProps {
-  sourcesData: {
-    sources: SourceItem[];
-  };
+  sourcesData: string | SourceItem[]; // sourcesData can be a JSON string or an array
 }
 
 export default function SourcesLog({ sourcesData }: SourcesLogProps) {
@@ -23,16 +22,31 @@ export default function SourcesLog({ sourcesData }: SourcesLogProps) {
   const toggleOpen = () => setIsOpen(!isOpen);
 
   useEffect(() => {
-    if (sourcesData?.sources?.length) {
-      const text = sourcesData.sources
-        .map(
-          (source, index) =>{
-            const timestamp = new Date().toLocaleTimeString('en-GB');
-            return `${timestamp} - ${source["Source Name"]} - ${source.URL}`;
-          }
-        )
+    // Check if sourcesData is a string (JSON string), and parse it if needed
+    let parsedData = sourcesData;
+    if (typeof sourcesData === 'string') {
+      try {
+        parsedData = JSON.parse(sourcesData); // Parse the JSON string into an array
+      } catch (error) {
+        console.error("Invalid JSON string", error);
+        parsedData = []; // Fallback to empty array in case of invalid JSON
+      }
+    }
+
+    // Now, parsedData will either be an array or an object with a sources key
+    const sources = convertToArray(parsedData);
+    console.log('Sources:', sources);
+
+    if (sources.length) {
+      const text = sources
+        .map((source) => {
+          const timestamp = new Date().toLocaleTimeString('en-GB');
+          return `${timestamp} - ${source.source} - ${source.url}`;
+        })
         .join('\n');
       setSourcesText(text);
+    } else {
+      setSourcesText('No log available');
     }
   }, [sourcesData]);
 
@@ -55,9 +69,9 @@ export default function SourcesLog({ sourcesData }: SourcesLogProps) {
           <motion.div
             key="dropdown"
             initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
+            animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
             className="px-4 overflow-hidden"
           >
             <textarea

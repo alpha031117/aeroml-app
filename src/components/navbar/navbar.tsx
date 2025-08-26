@@ -66,7 +66,7 @@ const NavBar = () => {
           <div className="relative">
             <button
               onClick={toggleDropdown}
-              className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-600 text-white font-bold"
+              className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-600 text-white font-bold cursor-pointer"
             >
               {firstLetter}
             </button>

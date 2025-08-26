@@ -5,9 +5,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronUp, ChevronDown, Globe } from 'lucide-react';
 
 interface SourceItem {
-  "Source Name": string;
-  URL: string;
-  topic?: string;
+  source: string;
+  url: string;
+  reason?: string;
 }
 
 interface ExpandableSourcesListProps {
@@ -16,6 +16,7 @@ interface ExpandableSourcesListProps {
 }
 
 export default function ExpandableSourcesList({ title = "Dataset Sources", sources }: ExpandableSourcesListProps) {
+  console.log(sources);
   const [isOpen, setIsOpen] = useState(true);
 
   const toggleOpen = () => setIsOpen(!isOpen);
@@ -43,7 +44,7 @@ export default function ExpandableSourcesList({ title = "Dataset Sources", sourc
             className="px-4 pb-4 overflow-hidden"
           >
             {/* Scrollable list container */}
-            <div className="max-h-70 overflow-y-auto space-y-4 pr-2">
+            <div className="max-h-70 overflow-y-auto space-y-4 pr-2 no-scrollbar">
               {sources.map((source, index) => (
                 <div
                   key={index}
@@ -51,14 +52,14 @@ export default function ExpandableSourcesList({ title = "Dataset Sources", sourc
                 >
                   <Globe className="w-6 h-6 mt-1 text-white" />
                   <div>
-                    <p className="font-medium text-medium">{source["Source Name"]}</p>
+                    <p className="font-medium text-medium">{source.source}</p>
                     <a
-                      href={source.URL}
+                      href={source.url}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-gray-400 text-sm hover:underline"
                     >
-                      {source.URL}
+                      {source.url}
                     </a>
                   </div>
                 </div>

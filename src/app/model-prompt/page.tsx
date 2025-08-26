@@ -35,7 +35,7 @@ export default function ModelPrompt() {
         console.log('Response from backend:', response.data);
 
         // Passing the response (model input result) to the next page via state
-        router.push(`/dataset-selection?sourcesData=${encodeURIComponent(JSON.stringify(response.data.sources))}`);
+        router.push(`/dataset-generation?sourcesData=${encodeURIComponent(JSON.stringify(response.data.sources))}`);
 
     } catch (error) {
         console.error('Error sending input to backend:', error);
