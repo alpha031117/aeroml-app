@@ -384,7 +384,9 @@ export default function Page() {
                         <Link href="/model-prompt">
                             <Button variant="outline" className="cursor-pointer" icon={<Icon.Back />}>Reprompt to Generate</Button>
                         </Link>
-                        <Button variant="primary" className="cursor-pointer" icon={<Icon.Play />}>Train Model</Button>
+                        <Link href="/model-training">
+                            <Button variant="primary" className="cursor-pointer" icon={<Icon.Play />}>Train Model</Button>
+                        </Link>
                     </div>
                 </div>
             </div>
