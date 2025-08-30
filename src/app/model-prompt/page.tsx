@@ -7,6 +7,7 @@ import { PaperPlaneIcon } from "@radix-ui/react-icons";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import axios from 'axios'; // Import axios for making HTTP requests
 import { useRouter } from 'next/navigation'; // Import useRouter for navigation
+import { Button } from '@/components/ui';
 
 // Placeholder suggestions
 const suggestions = [
@@ -43,7 +44,7 @@ export default function ModelPrompt() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen overflow-y-hidden">
+    <div className="flex flex-col min-h-screen overflow-y-hidden bg-black">
         {/* Nav Bar */}
         <NavBar />
         <div
@@ -69,12 +70,13 @@ export default function ModelPrompt() {
                     className="w-full px-4 py-3 rounded-md bg-transparent border border-gray-600 text-white placeholder:text-gray-400 focus:outline-none"
                     required
                   />
-                  <button 
-                  className="flex items-center gap-2 px-5 py-3 rounded-md bg-white text-black font-medium hover:bg-gray-200 transition whitespace-nowrap cursor-pointer"
-                  onClick={handleContinue}
+                  <Button 
+                    variant="primary"
+                    onClick={handleContinue}
+                    className="cursor-pointer"
                   >
                   Continue <PaperPlaneIcon />
-                  </button>
+                  </Button>
               </div>
 
               {/* Suggestions */}
@@ -83,7 +85,7 @@ export default function ModelPrompt() {
                   {suggestions.map((sugg, index) => (
                       <div
                         key={index}
-                        className="border-b border-gray-700 pb-2 text-sm text-gray-300 cursor-pointer hover:text-pink-300"
+                        className="border-b border-gray-700 pb-2 text-sm text-gray-300 cursor-pointer hover:text-gray-400 transition"
                         onClick={() => handleSuggestionClick(sugg)} // Handle suggestion click
                       >
                           {sugg}

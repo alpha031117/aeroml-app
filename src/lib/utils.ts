@@ -1,3 +1,10 @@
+import { type ClassValue, clsx } from "clsx"
+import { twMerge } from "tailwind-merge"
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
+
 // utils.ts
 export function convertToArray(data: any): any[] {
     console.log('Converting data to array:', data);

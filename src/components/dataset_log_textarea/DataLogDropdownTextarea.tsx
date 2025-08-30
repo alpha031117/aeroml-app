@@ -51,7 +51,7 @@ export default function SourcesLog({ sourcesData }: SourcesLogProps) {
   }, [sourcesData]);
 
   return (
-    <div className="border border-gray-600 rounded-md overflow-hidden bg-black text-white w-full">
+    <div className="border border-gray-600 rounded-md overflow-hidden bg-black text-white w-full no-scrollbar">
       <div
         className="flex justify-between items-center px-4 py-3 cursor-pointer"
         onClick={toggleOpen}

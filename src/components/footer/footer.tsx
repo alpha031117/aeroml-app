@@ -1,6 +1,10 @@
-const Footer = () => {
+interface FooterProps {
+  isLandingPage?: boolean;
+}
+
+const Footer = ({ isLandingPage = false }: FooterProps) => {
     return (
-      <footer className="w-full px-6 py-10 text-sm text-white bg-[#080609]">
+      <footer className={`w-full px-6 py-10 text-sm text-white mt-auto ${isLandingPage ? 'bg-[#080609]' : 'bg-black'}`}>
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between gap-6">
           {/* Left Section */}
           <div>

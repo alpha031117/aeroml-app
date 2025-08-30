@@ -9,7 +9,11 @@ import Image from "next/image"; // Import Image for optimized image loading
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
-const NavBar = () => {
+interface NavBarProps {
+  isLandingPage?: boolean;
+}
+
+const NavBar = ({ isLandingPage = false }: NavBarProps) => {
   const { data: session, status } = useSession(); // Use useSession to get session data
   const [isDropdownOpen, setIsDropdownOpen] = useState(false); // State to control dropdown visibility
   const dropdownRef = useRef<HTMLDivElement>(null); // Reference for the dropdown to detect outside clicks
@@ -39,7 +43,7 @@ const NavBar = () => {
   }, []);
 
   return (
-    <header className="w-full flex justify-between items-center px-6 py-4 bg-[#080609] shadow-md">
+    <header className={`w-full flex justify-between items-center px-6 py-4 shadow-md ${isLandingPage ? 'bg-[#080609]' : 'bg-black'}`}>
       {/* Logo + Title */}
       <div className="flex items-center gap-3">
         <Image
