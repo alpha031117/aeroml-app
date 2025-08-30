@@ -57,7 +57,7 @@ export default function DatasetGeneration() {
       }
 
     return (
-        <div className="flex flex-col min-h-screen overflow-y-hidden">
+        <div className="flex flex-col min-h-screen overflow-y-hidden bg-black">
             {/* Nav Bar */}
             <NavBar />
             <div>
