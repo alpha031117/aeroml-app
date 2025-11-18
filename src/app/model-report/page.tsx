@@ -237,7 +237,7 @@ export default function ModelReport() {
               <p className="text-sm text-neutral-400">Top performing models ranked by AUC. Click column headers to sort by different metrics.</p>
             </div>
             <a
-              href={`/model-details?model_id=${sortedData[0]?.model_id ?? ''}&session_id=${sessionId}`}
+              href={`/model-detail?session_id=${sessionId}`}
               className="inline-flex items-center bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20 rounded-md px-4 py-2 font-medium text-sm transition-colors"
             >
               <EyeIcon className="h-4 w-4 mr-2" />
