@@ -111,7 +111,7 @@ export default function ModelReport() {
       
       return 0;
     });
-  }, [sortKey, sortDirection]);
+  }, [modelData, sortKey, sortDirection]);
 
   // Handle column header click for sorting
   const handleSort = (key: SortKey) => {
