@@ -242,7 +242,7 @@ export default function ModelReport() {
             >
               <EyeIcon className="h-4 w-4 mr-2" />
               View Top Model Details
-            </a>
+            </a>  
           </div>
 
           {/* Table */}
