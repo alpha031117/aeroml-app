@@ -1,20 +1,28 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
-import { Send, Download, Sparkles, Loader2 } from "lucide-react";
+import { Send, Download, Loader2 } from "lucide-react";
 import NavBar from "@/components/navbar/navbar";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";    
+import { buildApiUrl } from "@/lib/api";
 
 export default function Playground() {
     type Msg = { id: string; role: "user" | "assistant"; content: string };
     const [sessionId, setSessionId] = useState<string>('default');
 
-    const [messages, setMessages] = useState<Msg[]>([
-        {
-            id: crypto.randomUUID(),
-            role: "assistant",
-            content: "Hello! I'm your AI assistant. How can I help you today?",
-        },
-    ]);
+    // Start with empty array to avoid hydration mismatch
+    // Initial message will be added in useEffect on client side only
+    const [messages, setMessages] = useState<Msg[]>([]);
+    
+    // Initialize welcome message on client mount only
+    useEffect(() => {
+        setMessages([
+            {
+                id: crypto.randomUUID(),
+                role: "assistant",
+                content: "Hello! I'm your AI assistant. How can I help you today?",
+            },
+        ]);
+    }, []);
     const [input, setInput] = useState("");
     const [isThinking, setIsThinking] = useState(false);
     const [modelInfo, setModelInfo] = useState<{type?: string}>({});
@@ -40,7 +48,7 @@ export default function Playground() {
         
         const fetchModelInfo = async () => {
             try {
-                const response = await fetch(`http://127.0.0.1/api/model-training/model-info/${sessionId}`);
+                const response = await fetch(buildApiUrl(`/api/model-training/model-info/${sessionId}`));
                 if (response.ok) {
                     const data = await response.json();
                     setModelInfo({
@@ -73,7 +81,7 @@ export default function Playground() {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minutes timeout
             
-            const response = await fetch(`http://127.0.0.1/api/model-training/model-chat/${sessionId}`, {
+            const response = await fetch(buildApiUrl(`/api/model-training/model-chat/${sessionId}`), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

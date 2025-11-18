@@ -29,7 +29,15 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getServerSession(authOptions);  // Fetch session
+  // Fetch session with error handling for JWT decryption failures
+  let session = null;
+  try {
+    session = await getServerSession(authOptions);
+  } catch (error) {
+    // If JWT decryption fails (e.g., secret changed or missing), log and continue without session
+    console.error('Session error (this is normal if NEXTAUTH_SECRET was recently changed):', error);
+    session = null;
+  }
 
   return (
     <html lang="en">
