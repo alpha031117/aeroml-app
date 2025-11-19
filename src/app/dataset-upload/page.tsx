@@ -238,28 +238,36 @@ export default function DatasetUploadPage() {
       return;
     }
 
-    // Prepare data to pass to model-training page (exclude rawFile as it can't be serialized)
-    const trainingData = {
+    // Prepare minimal data for sessionStorage (exclude large dataset)
+    const minimalData = {
       prompt,
-      dataset: {
-        fileInfo: uploadedFile,
-        headers,
-        data: previewData
-      },
-      validation: validationResult
+      fileInfo: uploadedFile,
+      validation: validationResult,
+      targetColumn: validationResult.validation.suggested_target_column
     };
 
     // Navigate to model-training page with data
-    console.log('Navigating to training with data:', trainingData);
+    console.log('Navigating to training with minimal data:', minimalData);
     
     try {
-      // Store data in sessionStorage instead of URL to avoid length limits
+      // Store minimal data in sessionStorage
       const dataKey = `aeroml-dataset-${Date.now()}`;
-      sessionStorage.setItem(dataKey, JSON.stringify(trainingData));
-      console.log('Stored training data in sessionStorage with key:', dataKey);
+      sessionStorage.setItem(dataKey, JSON.stringify(minimalData));
+      console.log('Stored minimal training data in sessionStorage with key:', dataKey);
+      
+      // Store raw file separately with a different key for the training API
+      const fileKey = `aeroml-file-${Date.now()}`;
+      sessionStorage.setItem(fileKey, 'placeholder'); // We'll handle file differently
+      
+      // Store the actual file in a way that can be accessed by the training page
+      // We'll use a global variable or a different approach
+      if (typeof window !== 'undefined') {
+        (window as any).aeromlRawFile = rawFileData;
+        (window as any).aeromlFileKey = fileKey;
+      }
       
       // Navigate with just the key
-      router.push(`/model-training?dataKey=${dataKey}`);
+      router.push(`/model-training?dataKey=${dataKey}&fileKey=${fileKey}`);
     } catch (error) {
       console.error('Error preparing training data:', error);
       alert('Error preparing data for training. Please try again.');
