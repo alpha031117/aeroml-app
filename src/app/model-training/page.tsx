@@ -5,7 +5,7 @@ import Footer from "@/components/footer/footer";
 import NavBar from "@/components/navbar/navbar";
 import { PaperPlaneIcon } from "@radix-ui/react-icons";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import TrainingDropdownTextarea from '@/components/training_textarea/TrainingDropdownTextarea';
 import Loader from '@/components/loader/loader';
 import { Button } from '@/components/ui';
@@ -23,6 +23,37 @@ interface TrainingLog {
   message: string;
 }
 
+// Define the minimal dataset data interface from previous page
+interface MinimalDatasetData {
+  prompt: string;
+  fileInfo: {
+    name: string;
+    size: string;
+    rows: number;
+    columns: number;
+  };
+  validation: {
+    status: string;
+    dataset_info: {
+      filename: string;
+      num_rows: number;
+      num_columns: number;
+      columns: string[];
+      missing_values: Record<string, number>;
+    };
+    validation: {
+      is_valid: boolean;
+      confidence_score: number;
+      validation_message: string;
+      recommendations: string[];
+      potential_issues: string[];
+      suggested_target_column: string;
+      suggested_preprocessing: string[];
+    };
+  };
+  targetColumn: string;
+}
+
 // Define the training data interface
 interface TrainingData {
   summary: string;
@@ -32,12 +63,20 @@ interface TrainingData {
   currentEpoch: number;
   totalEpochs: number;
   estimatedTimeRemaining: string;
+  datasetInfo?: MinimalDatasetData; // Add dataset info to training data
 }
 
 export default function ModelTraining() {
     const searchParams = useSearchParams();
+    const router = useRouter();
     const [isLoading, setIsLoading] = useState(true);
     const [trainingData, setTrainingData] = useState<TrainingData | null>(null);
+    const [datasetData, setDatasetData] = useState<MinimalDatasetData | null>(null);
+    const [rawFile, setRawFile] = useState<File | null>(null);
+    const [isTraining, setIsTraining] = useState(false);
+    const [trainingLogs, setTrainingLogs] = useState<TrainingLog[]>([]);
+    const [trainingStatus, setTrainingStatus] = useState<'idle' | 'starting' | 'running' | 'completed' | 'failed'>('idle');
+    const [sessionId, setSessionId] = useState<string | null>(null);
     
 
 
@@ -204,14 +243,109 @@ export default function ModelTraining() {
     };
 
     useEffect(() => {
-        const rawData = searchParams ? searchParams.get('sourcesData') : null;
-        if (rawData) {
+        // Check for dataset data from dataset-upload page
+        const dataKeyParam = searchParams ? searchParams.get('dataKey') : null;
+        const fileKeyParam = searchParams ? searchParams.get('fileKey') : null;
+        const datasetDataParam = searchParams ? searchParams.get('datasetData') : null;
+        const sourcesDataParam = searchParams ? searchParams.get('sourcesData') : null;
+        
+        if (dataKeyParam) {
+          // New method: Read minimal data from sessionStorage
           try {
-            const parsed = JSON.parse(decodeURIComponent(rawData));
+            const storedData = sessionStorage.getItem(dataKeyParam);
+            if (storedData) {
+              const parsedDataset: MinimalDatasetData = JSON.parse(storedData);
+              setDatasetData(parsedDataset);
+              
+              // Get the raw file from global variable
+              if (typeof window !== 'undefined' && (window as any).aeromlRawFile) {
+                setRawFile((window as any).aeromlRawFile);
+                // Clean up global variable
+                delete (window as any).aeromlRawFile;
+                delete (window as any).aeromlFileKey;
+              }
+              
+              // Create training data based on real dataset
+              const realTrainingData: TrainingData = {
+                summary: `Training a machine learning model on ${parsedDataset.fileInfo.name} with ${parsedDataset.fileInfo.rows.toLocaleString()} samples for: ${parsedDataset.prompt}`,
+                modelName: `AeroML-${parsedDataset.fileInfo.name.split('.')[0]}`,
+                datasetSize: parsedDataset.fileInfo.rows,
+                currentEpoch: 1,
+                totalEpochs: Math.min(50, Math.max(10, Math.floor(parsedDataset.fileInfo.rows / 1000))), // Dynamic epochs based on dataset size
+                estimatedTimeRemaining: "Calculating...",
+                trainingLogs: [
+                  {
+                    id: "1",
+                    timestamp: new Date().toISOString(),
+                    epoch: 1,
+                    loss: 0.0,
+                    accuracy: 0.0,
+                    learningRate: 0.001,
+                    status: 'running',
+                    message: `Starting training with ${parsedDataset.fileInfo.name}...`
+                  }
+                ],
+                datasetInfo: parsedDataset
+              };
+              
+              setTrainingData(realTrainingData);
+              
+              // Clean up sessionStorage after use
+              sessionStorage.removeItem(dataKeyParam);
+              if (fileKeyParam) {
+                sessionStorage.removeItem(fileKeyParam);
+              }
+            } else {
+              console.warn("No data found in sessionStorage for key:", dataKeyParam);
+              setTrainingData(dummyTrainingData);
+            }
+          } catch (err) {
+            console.error("Error reading dataset from sessionStorage:", err);
+            // Fallback to dummy data
+            setTrainingData(dummyTrainingData);
+          }
+        } else if (datasetDataParam) {
+          // Legacy method: Read from URL (kept for backward compatibility)
+          try {
+            const parsedDataset: any = JSON.parse(decodeURIComponent(datasetDataParam));
+            setDatasetData(parsedDataset);
+            
+            // Create training data based on real dataset
+            const realTrainingData: TrainingData = {
+              summary: `Training a machine learning model on ${parsedDataset.dataset.fileInfo.name} with ${parsedDataset.dataset.fileInfo.rows.toLocaleString()} samples for: ${parsedDataset.prompt}`,
+              modelName: `AeroML-${parsedDataset.dataset.fileInfo.name.split('.')[0]}`,
+              datasetSize: parsedDataset.dataset.fileInfo.rows,
+              currentEpoch: 1,
+              totalEpochs: Math.min(50, Math.max(10, Math.floor(parsedDataset.dataset.fileInfo.rows / 1000))), // Dynamic epochs based on dataset size
+              estimatedTimeRemaining: "Calculating...",
+              trainingLogs: [
+                {
+                  id: "1",
+                  timestamp: new Date().toISOString(),
+                  epoch: 1,
+                  loss: 0.0,
+                  accuracy: 0.0,
+                  learningRate: 0.001,
+                  status: 'running',
+                  message: `Starting training with ${parsedDataset.dataset.fileInfo.name}...`
+                }
+              ],
+              datasetInfo: parsedDataset
+            };
+            
+            setTrainingData(realTrainingData);
+          } catch (err) {
+            console.error("Invalid dataset JSON in query:", err);
+            // Fallback to dummy data
+            setTrainingData(dummyTrainingData);
+          }
+        } else if (sourcesDataParam) {
+          try {
+            const parsed = JSON.parse(decodeURIComponent(sourcesDataParam));
             // For now, use dummy data instead of parsed sources data
             setTrainingData(dummyTrainingData);
           } catch (err) {
-            console.error("Invalid JSON in query:", err);
+            console.error("Invalid sources JSON in query:", err);
             // Fallback to dummy data
             setTrainingData(dummyTrainingData);
           }
@@ -219,14 +353,227 @@ export default function ModelTraining() {
           // No query params, use dummy data
           setTrainingData(dummyTrainingData);
         }
+        
         setTimeout(() => {
           setIsLoading(false); // give it a bit of UX "smooth load"
         }, 600); // optional delay for fade-in effect
       }, [searchParams]);
 
-    const handleContinue = () => {
-        // TODO: Implement continue logic when API is ready
-        console.log("Continue button clicked - API integration pending");
+    const startTraining = async () => {
+        if (!datasetData || !rawFile) {
+            alert('No dataset data or file available. Please go back and upload a dataset.');
+            return;
+        }
+
+        setIsTraining(true);
+        setTrainingStatus('starting');
+        setTrainingLogs([]);
+
+        try {
+            // Use the original raw file directly
+            const formData = new FormData();
+            formData.append('file', rawFile, datasetData.fileInfo.name);
+            formData.append('target_variable', datasetData.targetColumn || '');
+
+            console.log('Starting training with target variable:', datasetData.targetColumn);
+
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/model-training/run-h2o-ml-pipeline-advanced`, {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            setTrainingStatus('running');
+
+            // Handle streaming response for real-time logs
+            const reader = response.body?.getReader();
+            const decoder = new TextDecoder();
+
+            if (reader) {
+                let buffer = '';
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    
+                    if (done) {
+                        setTrainingStatus('completed');
+                        
+                        // Automatically extract session ID after completion
+                        if (!sessionId) {
+                            // First try to extract from the final buffer using multiple patterns
+                            let sessionMatch = buffer.match(/Session ID:\s*([a-f0-9-]{36})/i);
+                            if (!sessionMatch) {
+                                sessionMatch = buffer.match(/session_data[\\\/]([a-f0-9-]{36})/);
+                            }
+                            if (!sessionMatch) {
+                                sessionMatch = buffer.match(/"session_id":\s*"([a-f0-9-]{36})"/);
+                            }
+                            if (!sessionMatch) {
+                                sessionMatch = buffer.match(/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})/i);
+                            }
+                            
+                            if (sessionMatch) {
+                                setSessionId(sessionMatch[1]);
+                                console.log('Extracted session ID from final buffer:', sessionMatch[1]);
+                            } else {
+                                // Try to extract from existing training logs
+                                setTimeout(() => {
+                                    setTrainingLogs(currentLogs => {
+                                        for (const log of currentLogs) {
+                                            const uuidMatch = log.message.match(/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})/i);
+                                            if (uuidMatch) {
+                                                setSessionId(uuidMatch[1]);
+                                                console.log('Auto-extracted session ID from logs:', uuidMatch[1]);
+                                                return currentLogs;
+                                            }
+                                        }
+                                        
+                                        // If still no session ID found, generate a fallback
+                                        const fallbackId = `training-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                                        setSessionId(fallbackId);
+                                        console.log('Generated fallback session ID:', fallbackId);
+                                        return currentLogs;
+                                    });
+                                }, 100); // Small delay to ensure logs are updated
+                            }
+                        }
+                        break;
+                    }
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || ''; // Keep incomplete line in buffer
+
+                    for (const line of lines) {
+                        if (line.trim()) {
+                            // Try to extract session ID from any line immediately
+                            if (!sessionId) {
+                                const uuidMatch = line.match(/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})/i);
+                                if (uuidMatch) {
+                                    setSessionId(uuidMatch[1]);
+                                    console.log('Extracted session ID from any line:', uuidMatch[1]);
+                                }
+                            }
+                            
+                            try {
+                                const logEntry = JSON.parse(line);
+                                
+                                // Extract session_id if present in the log entry (FINAL_RESULT format)
+                                if (logEntry.session_id) {
+                                    setSessionId(logEntry.session_id);
+                                    console.log('Training session ID from JSON:', logEntry.session_id);
+                                }
+                                
+                                // Also check for session_id in different possible locations
+                                if (!sessionId && (logEntry.sessionId || logEntry.session || logEntry.id)) {
+                                    const extractedId = logEntry.sessionId || logEntry.session || logEntry.id;
+                                    setSessionId(extractedId);
+                                    console.log('Extracted session ID from alternative field:', extractedId);
+                                }
+                                
+                                const newLog: TrainingLog = {
+                                    id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+                                    timestamp: new Date().toISOString(),
+                                    epoch: logEntry.epoch || 0,
+                                    loss: logEntry.loss || 0,
+                                    accuracy: logEntry.accuracy || 0,
+                                    learningRate: logEntry.learning_rate || 0.001,
+                                    status: 'running',
+                                    message: logEntry.message || line
+                                };
+                                
+                                setTrainingLogs(prev => [...prev, newLog]);
+                            } catch (e) {
+                                // If not JSON, treat as plain text log and try to extract session ID
+                                
+                                // Extract session ID from various formats in the log line
+                                if (!sessionId) {
+                                    let sessionMatch = null;
+                                    
+                                    // Format 1: "LOG: Session ID: 985fe90b-c928-4357-aaf3-868045a6f7c4"
+                                    if (line.includes('Session ID:')) {
+                                        sessionMatch = line.match(/Session ID:\s*([a-f0-9-]{36})/i);
+                                    }
+                                    
+                                    // Format 2: "session_data\65924f44-9c2e-4fc2-82e4-0b1ffcc5e5d2\"
+                                    if (!sessionMatch && line.includes('session_data')) {
+                                        sessionMatch = line.match(/session_data[\\\/]([a-f0-9-]{36})/);
+                                    }
+                                    
+                                    // Format 3: Any UUID pattern in the line
+                                    if (!sessionMatch) {
+                                        sessionMatch = line.match(/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})/i);
+                                    }
+                                    
+                                    if (sessionMatch) {
+                                        setSessionId(sessionMatch[1]);
+                                        console.log('Extracted session ID from line:', sessionMatch[1], 'from:', line);
+                                    }
+                                }
+                                
+                                const newLog: TrainingLog = {
+                                    id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+                                    timestamp: new Date().toISOString(),
+                                    epoch: 0,
+                                    loss: 0,
+                                    accuracy: 0,
+                                    learningRate: 0,
+                                    status: 'running',
+                                    message: line
+                                };
+                                
+                                setTrainingLogs(prev => [...prev, newLog]);
+                            }
+                        }
+                    }
+                }
+            }
+
+        } catch (error) {
+            console.error('Error starting training:', error);
+            setTrainingStatus('failed');
+            const errorLog: TrainingLog = {
+                id: Date.now().toString(),
+                timestamp: new Date().toISOString(),
+                epoch: 0,
+                loss: 0,
+                accuracy: 0,
+                learningRate: 0,
+                status: 'failed',
+                message: `Training failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+            };
+            setTrainingLogs(prev => [...prev, errorLog]);
+        } finally {
+            setIsTraining(false);
+        }
+    };
+
+    const handleModelReport = () => {
+        if (sessionId) {
+            router.push(`/model-report?session_id=${sessionId}`);
+        } else {
+            alert('No session ID available. Please complete training first.');
+        }
+    };
+
+    const handleAIEnhancement = () => {
+        if (sessionId) {
+            router.push(`/ml-recommendation?session_id=${sessionId}`);
+        } else {
+            alert('No session ID available. Please complete training first.');
+        }
+    };
+
+
+    const handleDeployModel = () => {
+        if (sessionId) {
+            router.push(`/playground?session_id=${sessionId}`);
+        } else {
+            alert('No session ID available. Please complete training first.');
+        }
     };
 
       if (isLoading || !trainingData) {
@@ -247,13 +594,6 @@ export default function ModelTraining() {
             <NavBar />
             <div>
             <section className="w-full max-w-5xl mx-auto px-4 py-16 text-white flex-grow">
-            <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex items-center gap-2 ml-auto">
-                        <Button variant="outline" className="cursor-pointer" icon={<Bot/>}>
-                            Ask AERO AI for Model Enhancement
-                        </Button>
-                    </div>
-                </div>
                 {/* Section Title */}
                 <div className="mb-6">
                     <h4 className="text-xl text-gray-400 mb-2">Model Training</h4>
@@ -263,27 +603,142 @@ export default function ModelTraining() {
                     <p className="text-gray-400 mb-10 mt-3 text-medium text-center sm:text-left">
                     {trainingData?.summary}
                     </p>
+
+                    {/* Dataset Information */}
+                    {datasetData && (
+                      <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-6 mb-6">
+                        <h3 className="text-lg font-semibold text-white mb-4">Dataset Information</h3>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                          <div className="bg-zinc-800 rounded-lg p-3">
+                            <p className="text-zinc-400 text-sm">Dataset</p>
+                            <p className="text-white font-medium truncate">{datasetData.fileInfo.name}</p>
+                          </div>
+                          <div className="bg-zinc-800 rounded-lg p-3">
+                            <p className="text-zinc-400 text-sm">Rows</p>
+                            <p className="text-white font-medium">{datasetData.fileInfo.rows.toLocaleString()}</p>
+                          </div>
+                          <div className="bg-zinc-800 rounded-lg p-3">
+                            <p className="text-zinc-400 text-sm">Columns</p>
+                            <p className="text-white font-medium">{datasetData.fileInfo.columns}</p>
+                          </div>
+                          <div className="bg-zinc-800 rounded-lg p-3">
+                            <p className="text-zinc-400 text-sm">Confidence</p>
+                            <p className={`font-medium ${
+                              datasetData.validation.validation.confidence_score >= 80 ? 'text-green-400' :
+                              datasetData.validation.validation.confidence_score >= 60 ? 'text-yellow-400' : 'text-red-400'
+                            }`}>
+                              {datasetData.validation.validation.confidence_score}%
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {/* Target Column */}
+                        {datasetData.targetColumn && (
+                          <div className="mb-4">
+                            <p className="text-zinc-400 text-sm mb-2">Target Column</p>
+                            <div className="inline-flex items-center gap-2 bg-cyan-500/10 text-cyan-400 px-3 py-1 rounded-full text-sm">
+                              <span>{datasetData.targetColumn}</span>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Prompt */}
+                        <div>
+                          <p className="text-zinc-400 text-sm mb-2">Training Objective</p>
+                          <p className="text-zinc-300 text-sm leading-relaxed bg-zinc-800 rounded-lg p-3">
+                            {datasetData.prompt}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Training Control */}
+                    {datasetData && (
+                      <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-6 mb-6">
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="text-lg font-semibold text-white">Training Control</h3>
+                          <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+                            trainingStatus === 'idle' ? 'bg-gray-500/20 text-gray-400' :
+                            trainingStatus === 'starting' ? 'bg-yellow-500/20 text-yellow-400' :
+                            trainingStatus === 'running' ? 'bg-blue-500/20 text-blue-400' :
+                            trainingStatus === 'completed' ? 'bg-green-500/20 text-green-400' :
+                            'bg-red-500/20 text-red-400'
+                          }`}>
+                            {trainingStatus === 'idle' ? 'Ready to Train' :
+                             trainingStatus === 'starting' ? 'Starting...' :
+                             trainingStatus === 'running' ? 'Training in Progress' :
+                             trainingStatus === 'completed' ? 'Training Completed' :
+                             'Training Failed'}
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center justify-between">
+                          <div className="text-sm text-zinc-400">
+                            Target Variable: <span className="text-cyan-400 font-medium">
+                              {datasetData.targetColumn || 'Not specified'}
+                            </span>
+                          </div>
+                          
+                          <Button
+                            variant={trainingStatus === 'idle' ? 'primary' : 'outline'}
+                            className="cursor-pointer"
+                            onClick={startTraining}
+                            disabled={isTraining || trainingStatus === 'running'}
+                            icon={isTraining ? (
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                            ) : (
+                              <PaperPlaneIcon />
+                            )}
+                          >
+                            {isTraining ? 'Starting Training...' : 
+                             trainingStatus === 'completed' ? 'Retrain Model' : 
+                             'Start Training'}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Training Log */}
-                    <TrainingDropdownTextarea trainingData={trainingData} />
+                    <TrainingDropdownTextarea 
+                      trainingData={{
+                        ...trainingData,
+                        trainingLogs: trainingLogs.length > 0 ? trainingLogs : trainingData.trainingLogs
+                      }} 
+                    />
                 </div>
-                <div className="flex justify-between items-center w-full mt-6">
-                    <Button
-                        variant="outline"
-                        className="cursor-pointer"
-                        // onClick={handleBack}
-                        icon={<FileText />}
-                    >
-                        Model Performance Report
-                    </Button>
-                    <Button
-                        variant="primary" 
-                        className="cursor-pointer"
-                        onClick={handleContinue}
-                        icon={<PaperPlaneIcon />}
-                    >
-                        Deploy Model
-                    </Button>
-                </div>
+
+
+                {trainingStatus === 'completed' && (
+                    <div className="flex justify-between items-center w-full mt-6">
+                        <div className="flex gap-3">
+                            <Button
+                                variant="outline"
+                                className="cursor-pointer"
+                                onClick={handleModelReport}
+                                icon={<FileText />}
+                            >
+                                Model Performance Report
+                            </Button>
+                            <Button 
+                                variant="outline" 
+                                className="cursor-pointer" 
+                                icon={<Bot/>}
+                                onClick={handleAIEnhancement}
+                            >
+                                Ask AERO AI for Model Enhancement
+                            </Button>
+                        </div>
+                        <Button
+                            variant="primary" 
+                            className="cursor-pointer"
+                            onClick={handleDeployModel}
+                            icon={<PaperPlaneIcon />}
+                        >
+                            Deploy Model
+                        </Button>
+                    </div>
+                )}
+
             </section>
             </div>
 
