@@ -27,20 +27,13 @@ export default function ModelPrompt() {
   const router = useRouter(); // Initialize the router
 
   const handleContinue = async () => {
-    try {
-        // Sending the POST request with the model input
-        const response = await axios.post('http://127.0.0.1:80/suggest-sources', {
-            modelInput: inputValue
-        });
-
-        console.log('Response from backend:', response.data);
-
-        // Passing the response (model input result) to the next page via state
-        router.push(`/dataset-generation?sourcesData=${encodeURIComponent(JSON.stringify(response.data.sources))}`);
-
-    } catch (error) {
-        console.error('Error sending input to backend:', error);
+    if (!inputValue.trim()) {
+      alert('Please enter a prompt for your model.');
+      return;
     }
+
+    // Navigate to dataset-upload page with the prompt
+    router.push(`/dataset-upload?prompt=${encodeURIComponent(inputValue)}`);
   };
 
   return (
