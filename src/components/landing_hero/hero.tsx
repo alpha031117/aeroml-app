@@ -1,9 +1,19 @@
 import { PaperPlaneIcon } from "@radix-ui/react-icons";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 
 const Hero = () => {
     const { ref, show } = useScrollReveal();
+    const { data: session } = useSession();
+    const router = useRouter();
+
+    const handleRunNowClick = () => {
+        if (session) {
+            router.push('/model-prompt');
+        }
+    };
     return (
         <div ref={ref} className={`float-in ${show ? "show" : ""}`}>
             <section className="text-center text-white py-20 px-3 max-w-6xl mx-auto mt-20">
@@ -22,7 +32,13 @@ const Hero = () => {
                     className="w-full px-4 py-3 rounded-md bg-transparent border border-gray-600 text-white focus:outline-none"
                     readOnly
                     />
-                    <button className="whitespace-nowrap px-5 py-3 rounded-md bg-white text-black font-medium flex items-center gap-2" disabled>
+                    <button 
+                        className={`whitespace-nowrap px-5 py-3 rounded-md bg-white text-black font-medium flex items-center gap-2 transition-opacity ${
+                            session ? 'hover:bg-gray-100 cursor-pointer' : 'opacity-50 cursor-not-allowed'
+                        }`}
+                        disabled={!session}
+                        onClick={handleRunNowClick}
+                    >
                         Run Now <PaperPlaneIcon />
                     </button>
                 </div>
