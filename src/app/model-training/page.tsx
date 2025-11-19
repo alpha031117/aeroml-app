@@ -23,6 +23,41 @@ interface TrainingLog {
   message: string;
 }
 
+// Define the dataset data interface from previous page
+interface DatasetData {
+  prompt: string;
+  dataset: {
+    fileInfo: {
+      name: string;
+      size: string;
+      rows: number;
+      columns: number;
+    };
+    headers: string[];
+    data: Array<Record<string, string | number>>;
+    rawFile?: File;
+  };
+  validation: {
+    status: string;
+    dataset_info: {
+      filename: string;
+      num_rows: number;
+      num_columns: number;
+      columns: string[];
+      missing_values: Record<string, number>;
+    };
+    validation: {
+      is_valid: boolean;
+      confidence_score: number;
+      validation_message: string;
+      recommendations: string[];
+      potential_issues: string[];
+      suggested_target_column: string;
+      suggested_preprocessing: string[];
+    };
+  };
+}
+
 // Define the training data interface
 interface TrainingData {
   summary: string;
@@ -32,12 +67,14 @@ interface TrainingData {
   currentEpoch: number;
   totalEpochs: number;
   estimatedTimeRemaining: string;
+  datasetInfo?: DatasetData; // Add dataset info to training data
 }
 
 export default function ModelTraining() {
     const searchParams = useSearchParams();
     const [isLoading, setIsLoading] = useState(true);
     const [trainingData, setTrainingData] = useState<TrainingData | null>(null);
+    const [datasetData, setDatasetData] = useState<DatasetData | null>(null);
     
 
 
@@ -204,14 +241,97 @@ export default function ModelTraining() {
     };
 
     useEffect(() => {
-        const rawData = searchParams ? searchParams.get('sourcesData') : null;
-        if (rawData) {
+        // Check for dataset data from dataset-upload page
+        const dataKeyParam = searchParams ? searchParams.get('dataKey') : null;
+        const datasetDataParam = searchParams ? searchParams.get('datasetData') : null;
+        const sourcesDataParam = searchParams ? searchParams.get('sourcesData') : null;
+        
+        if (dataKeyParam) {
+          // New method: Read from sessionStorage
           try {
-            const parsed = JSON.parse(decodeURIComponent(rawData));
+            const storedData = sessionStorage.getItem(dataKeyParam);
+            if (storedData) {
+              const parsedDataset: DatasetData = JSON.parse(storedData);
+              setDatasetData(parsedDataset);
+              
+              // Create training data based on real dataset
+              const realTrainingData: TrainingData = {
+                summary: `Training a machine learning model on ${parsedDataset.dataset.fileInfo.name} with ${parsedDataset.dataset.fileInfo.rows.toLocaleString()} samples for: ${parsedDataset.prompt}`,
+                modelName: `AeroML-${parsedDataset.dataset.fileInfo.name.split('.')[0]}`,
+                datasetSize: parsedDataset.dataset.fileInfo.rows,
+                currentEpoch: 1,
+                totalEpochs: Math.min(50, Math.max(10, Math.floor(parsedDataset.dataset.fileInfo.rows / 1000))), // Dynamic epochs based on dataset size
+                estimatedTimeRemaining: "Calculating...",
+                trainingLogs: [
+                  {
+                    id: "1",
+                    timestamp: new Date().toISOString(),
+                    epoch: 1,
+                    loss: 0.0,
+                    accuracy: 0.0,
+                    learningRate: 0.001,
+                    status: 'running',
+                    message: `Starting training with ${parsedDataset.dataset.fileInfo.name}...`
+                  }
+                ],
+                datasetInfo: parsedDataset
+              };
+              
+              setTrainingData(realTrainingData);
+              
+              // Clean up sessionStorage after use
+              sessionStorage.removeItem(dataKeyParam);
+            } else {
+              console.warn("No data found in sessionStorage for key:", dataKeyParam);
+              setTrainingData(dummyTrainingData);
+            }
+          } catch (err) {
+            console.error("Error reading dataset from sessionStorage:", err);
+            // Fallback to dummy data
+            setTrainingData(dummyTrainingData);
+          }
+        } else if (datasetDataParam) {
+          // Legacy method: Read from URL (kept for backward compatibility)
+          try {
+            const parsedDataset: DatasetData = JSON.parse(decodeURIComponent(datasetDataParam));
+            setDatasetData(parsedDataset);
+            
+            // Create training data based on real dataset
+            const realTrainingData: TrainingData = {
+              summary: `Training a machine learning model on ${parsedDataset.dataset.fileInfo.name} with ${parsedDataset.dataset.fileInfo.rows.toLocaleString()} samples for: ${parsedDataset.prompt}`,
+              modelName: `AeroML-${parsedDataset.dataset.fileInfo.name.split('.')[0]}`,
+              datasetSize: parsedDataset.dataset.fileInfo.rows,
+              currentEpoch: 1,
+              totalEpochs: Math.min(50, Math.max(10, Math.floor(parsedDataset.dataset.fileInfo.rows / 1000))), // Dynamic epochs based on dataset size
+              estimatedTimeRemaining: "Calculating...",
+              trainingLogs: [
+                {
+                  id: "1",
+                  timestamp: new Date().toISOString(),
+                  epoch: 1,
+                  loss: 0.0,
+                  accuracy: 0.0,
+                  learningRate: 0.001,
+                  status: 'running',
+                  message: `Starting training with ${parsedDataset.dataset.fileInfo.name}...`
+                }
+              ],
+              datasetInfo: parsedDataset
+            };
+            
+            setTrainingData(realTrainingData);
+          } catch (err) {
+            console.error("Invalid dataset JSON in query:", err);
+            // Fallback to dummy data
+            setTrainingData(dummyTrainingData);
+          }
+        } else if (sourcesDataParam) {
+          try {
+            const parsed = JSON.parse(decodeURIComponent(sourcesDataParam));
             // For now, use dummy data instead of parsed sources data
             setTrainingData(dummyTrainingData);
           } catch (err) {
-            console.error("Invalid JSON in query:", err);
+            console.error("Invalid sources JSON in query:", err);
             // Fallback to dummy data
             setTrainingData(dummyTrainingData);
           }
@@ -219,6 +339,7 @@ export default function ModelTraining() {
           // No query params, use dummy data
           setTrainingData(dummyTrainingData);
         }
+        
         setTimeout(() => {
           setIsLoading(false); // give it a bit of UX "smooth load"
         }, 600); // optional delay for fade-in effect
@@ -263,6 +384,55 @@ export default function ModelTraining() {
                     <p className="text-gray-400 mb-10 mt-3 text-medium text-center sm:text-left">
                     {trainingData?.summary}
                     </p>
+
+                    {/* Dataset Information */}
+                    {datasetData && (
+                      <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-6 mb-6">
+                        <h3 className="text-lg font-semibold text-white mb-4">Dataset Information</h3>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                          <div className="bg-zinc-800 rounded-lg p-3">
+                            <p className="text-zinc-400 text-sm">Dataset</p>
+                            <p className="text-white font-medium truncate">{datasetData.dataset.fileInfo.name}</p>
+                          </div>
+                          <div className="bg-zinc-800 rounded-lg p-3">
+                            <p className="text-zinc-400 text-sm">Rows</p>
+                            <p className="text-white font-medium">{datasetData.dataset.fileInfo.rows.toLocaleString()}</p>
+                          </div>
+                          <div className="bg-zinc-800 rounded-lg p-3">
+                            <p className="text-zinc-400 text-sm">Columns</p>
+                            <p className="text-white font-medium">{datasetData.dataset.fileInfo.columns}</p>
+                          </div>
+                          <div className="bg-zinc-800 rounded-lg p-3">
+                            <p className="text-zinc-400 text-sm">Confidence</p>
+                            <p className={`font-medium ${
+                              datasetData.validation.validation.confidence_score >= 80 ? 'text-green-400' :
+                              datasetData.validation.validation.confidence_score >= 60 ? 'text-yellow-400' : 'text-red-400'
+                            }`}>
+                              {datasetData.validation.validation.confidence_score}%
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {/* Target Column */}
+                        {datasetData.validation.validation.suggested_target_column && (
+                          <div className="mb-4">
+                            <p className="text-zinc-400 text-sm mb-2">Target Column</p>
+                            <div className="inline-flex items-center gap-2 bg-cyan-500/10 text-cyan-400 px-3 py-1 rounded-full text-sm">
+                              <span>{datasetData.validation.validation.suggested_target_column}</span>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Prompt */}
+                        <div>
+                          <p className="text-zinc-400 text-sm mb-2">Training Objective</p>
+                          <p className="text-zinc-300 text-sm leading-relaxed bg-zinc-800 rounded-lg p-3">
+                            {datasetData.prompt}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Training Log */}
                     <TrainingDropdownTextarea trainingData={trainingData} />
                 </div>

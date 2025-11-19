@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import * as XLSX from 'xlsx';
 import { Button } from '@/components/ui/button';
-import { Upload, X, FileSpreadsheet, CheckCircle, ArrowRight, MessageSquare } from 'lucide-react';
+import { Upload, X, FileSpreadsheet, CheckCircle, ArrowRight, MessageSquare, AlertTriangle, RefreshCw } from 'lucide-react';
 import NavBar from "@/components/navbar/navbar";
 import Footer from "@/components/footer/footer";
 
@@ -41,6 +41,7 @@ interface ValidationResult {
 
 export default function DatasetUploadPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [prompt, setPrompt] = useState<string>('');
   const [isDragOver, setIsDragOver] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<FileInfo | null>(null);
@@ -227,6 +228,43 @@ export default function DatasetUploadPage() {
       setIsValidating(false);
     }
   }, [rawFileData, prompt]);
+
+  const handleContinueToTraining = useCallback((forceProceed: boolean = false) => {
+    if (!validationResult || !uploadedFile || !prompt) return;
+
+    // Check confidence score only if not forcing
+    if (!forceProceed && validationResult.validation.confidence_score < 80) {
+      // Show warning for low confidence - this will be handled in the UI
+      return;
+    }
+
+    // Prepare data to pass to model-training page (exclude rawFile as it can't be serialized)
+    const trainingData = {
+      prompt,
+      dataset: {
+        fileInfo: uploadedFile,
+        headers,
+        data: previewData
+      },
+      validation: validationResult
+    };
+
+    // Navigate to model-training page with data
+    console.log('Navigating to training with data:', trainingData);
+    
+    try {
+      // Store data in sessionStorage instead of URL to avoid length limits
+      const dataKey = `aeroml-dataset-${Date.now()}`;
+      sessionStorage.setItem(dataKey, JSON.stringify(trainingData));
+      console.log('Stored training data in sessionStorage with key:', dataKey);
+      
+      // Navigate with just the key
+      router.push(`/model-training?dataKey=${dataKey}`);
+    } catch (error) {
+      console.error('Error preparing training data:', error);
+      alert('Error preparing data for training. Please try again.');
+    }
+  }, [validationResult, uploadedFile, prompt, headers, previewData, rawFileData, router]);
 
   const clearUpload = useCallback(() => {
     setUploadedFile(null);
@@ -427,6 +465,19 @@ export default function DatasetUploadPage() {
                 <div className="mt-6 space-y-4">
                   <h3 className="text-lg font-semibold text-white">Dataset Validation Results</h3>
                   
+                  {/* Low Confidence Warning */}
+                  {validationResult.validation.confidence_score < 80 && (
+                    <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4 flex items-start gap-3">
+                      <AlertTriangle className="w-5 h-5 text-yellow-400 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1">
+                        <p className="text-yellow-400 font-medium mb-1">Low Confidence Score</p>
+                        <p className="text-yellow-300/80 text-sm">
+                          The dataset validation confidence is below 80%. Please review the potential issues and consider refining your dataset or prompt before proceeding to training.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  
                   {/* Confidence Score */}
                   <div className="bg-zinc-900 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-2">
@@ -527,23 +578,36 @@ export default function DatasetUploadPage() {
                       onClick={() => setValidationResult(null)}
                       className="inline-flex items-center gap-2 bg-zinc-600 hover:bg-zinc-700 text-white px-4 py-2 rounded-full text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-zinc-500 cursor-pointer"
                     >
+                      <RefreshCw className="w-4 h-4" />
                       Re-validate
                     </button>
-                    <button
-                      onClick={() => {
-                        // Handle continue action - pass both prompt and dataset data
-                        console.log('Continuing with:', { prompt, dataset: uploadedFile, data: previewData, validation: validationResult });
-                        
-                        // You can navigate to the next page with both prompt and dataset data
-                        // Example: router.push(`/model-training?prompt=${encodeURIComponent(prompt)}&dataset=${encodeURIComponent(JSON.stringify({ fileInfo: uploadedFile, headers, data: previewData }))}`);
-                        
-                        alert(`Continuing to next step with validated dataset:\n- Prompt: ${prompt}\n- Dataset: ${uploadedFile.name} (${uploadedFile.rows} rows)\n- Confidence: ${validationResult.validation.confidence_score}%`);
-                      }}
-                      className="inline-flex items-center gap-2 bg-white hover:bg-gray-100 text-black px-4 py-2 rounded-full text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-500 cursor-pointer"
-                    >
-                      Continue
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
+                    
+                    {validationResult.validation.confidence_score < 80 ? (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={clearUpload}
+                          className="inline-flex items-center gap-2 bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-full text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-yellow-500 cursor-pointer"
+                        >
+                          <Upload className="w-4 h-4" />
+                          Upload New Dataset
+                        </button>
+                        <button
+                          onClick={() => handleContinueToTraining(true)}
+                          className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-full text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-red-500 cursor-pointer"
+                        >
+                          <AlertTriangle className="w-4 h-4" />
+                          Proceed Anyway
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => handleContinueToTraining(false)}
+                        className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-full text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-green-500 cursor-pointer"
+                      >
+                        <ArrowRight className="w-4 h-4" />
+                        Continue to Training
+                      </button>
+                    )}
                   </>
                 )}
               </div>
