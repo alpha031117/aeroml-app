@@ -4,10 +4,12 @@ import { Send, Download, Loader2 } from "lucide-react";
 import NavBar from "@/components/navbar/navbar";
 import { Button } from "@/components/ui/button";    
 import { buildApiUrl } from "@/lib/api";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Playground() {
     type Msg = { id: string; role: "user" | "assistant"; content: string };
     const [sessionId, setSessionId] = useState<string>('default');
+    const { userId, isLoading: authLoading } = useAuth();
 
     // Start with empty array to avoid hydration mismatch
     // Initial message will be added in useEffect on client side only
@@ -45,10 +47,12 @@ export default function Playground() {
     // Fetch model info when sessionId is available
     useEffect(() => {
         if (sessionId === 'default') return; // Don't fetch if sessionId hasn't been extracted yet
+        if (authLoading) return; // Wait for auth to load
+        if (!userId) return; // Don't fetch if userId is not available
         
         const fetchModelInfo = async () => {
             try {
-                const response = await fetch(buildApiUrl(`/api/model-training/model-info/${sessionId}`));
+                const response = await fetch(buildApiUrl(`/api/model-training/model-info/${sessionId}?user_id=${userId}`));
                 if (response.ok) {
                     const data = await response.json();
                     setModelInfo({
@@ -65,11 +69,20 @@ export default function Playground() {
         };
 
         fetchModelInfo();
-    }, [sessionId]);
+    }, [sessionId, userId, authLoading]);
 
     const handleSend = async () => {
         const trimmed = input.trim();
         if (!trimmed || isThinking) return;
+        if (!userId) {
+            const errorReply: Msg = {
+                id: crypto.randomUUID(),
+                role: "assistant",
+                content: "User authentication required. Please log in and try again.",
+            };
+            setMessages((m) => [...m, errorReply]);
+            return;
+        }
 
         const newUser: Msg = { id: crypto.randomUUID(), role: "user", content: trimmed };
         setMessages((m) => [...m, newUser]);
@@ -81,7 +94,7 @@ export default function Playground() {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minutes timeout
             
-            const response = await fetch(buildApiUrl(`/api/model-training/model-chat/${sessionId}`), {
+            const response = await fetch(buildApiUrl(`/api/model-training/model-chat/${sessionId}?user_id=${userId}`), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
