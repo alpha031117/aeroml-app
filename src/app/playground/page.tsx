@@ -10,6 +10,7 @@ export default function Playground() {
     type Msg = { id: string; role: "user" | "assistant"; content: string };
     const [sessionId, setSessionId] = useState<string>('default');
     const { userId, isLoading: authLoading } = useAuth();
+    const [isDownloading, setIsDownloading] = useState(false);
 
     // Start with empty array to avoid hydration mismatch
     // Initial message will be added in useEffect on client side only
@@ -177,6 +178,52 @@ export default function Playground() {
         }
     };
 
+    const handleDownload = async () => {
+        if (!userId || sessionId === 'default') {
+            alert('Session ID or User ID is missing. Cannot download model.');
+            return;
+        }
+
+        setIsDownloading(true);
+        try {
+            const response = await fetch(buildApiUrl(`/api/model-training/artifacts/download-model/${sessionId}?user_id=${userId}`), {
+                method: 'GET',
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            // Get the blob from the response
+            const blob = await response.blob();
+            
+            // Extract filename from Content-Disposition header or use a default
+            const contentDisposition = response.headers.get('content-disposition');
+            let filename = `model_${sessionId}.zip`;
+            if (contentDisposition) {
+                const filenameMatch = contentDisposition.match(/filename="?(.+)"?/i);
+                if (filenameMatch) {
+                    filename = filenameMatch[1];
+                }
+            }
+
+            // Create a download link and trigger download
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } catch (error) {
+            console.error('Error downloading model:', error);
+            alert('Failed to download model. Please try again.');
+        } finally {
+            setIsDownloading(false);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-black text-neutral-100">
             {/* Top nav */}
@@ -234,8 +281,21 @@ export default function Playground() {
                 {/* Sidebar */}
                 <aside className="flex flex-col gap-6">
                     {/* Download Model */}
-                    <Button variant="outline" className="cursor-pointer">
-                        <Download className="h-4 w-4" /> Download Model
+                    <Button 
+                        variant="outline" 
+                        className="cursor-pointer"
+                        onClick={handleDownload}
+                        disabled={isDownloading || !userId || sessionId === 'default'}
+                    >
+                        {isDownloading ? (
+                            <>
+                                <Loader2 className="h-4 w-4 animate-spin" /> Downloading...
+                            </>
+                        ) : (
+                            <>
+                                <Download className="h-4 w-4" /> Download Model
+                            </>
+                        )}
                     </Button>
                     {/* Suggestions */}
                     {/* <div className="rounded-xl border border-neutral-800 bg-neutral-900/40">
