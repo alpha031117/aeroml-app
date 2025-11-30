@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { buildApiUrl } from '@/lib/api';
 import { StatCard } from '@/components/ui/stat-card';
+import { useAuth } from '@/hooks/useAuth';
 
 // Type definitions for the API response
 interface KeyMetrics {
@@ -61,6 +63,7 @@ interface ModelPerformanceResponse {
 export default function ModelDetail() {
   const searchParams = useSearchParams();
   const sessionId = searchParams?.get('session_id') || 'default';
+  const { userId, isLoading: authLoading } = useAuth();
   
   const [data, setData] = useState<ModelPerformanceResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -91,13 +94,24 @@ export default function ModelDetail() {
   useEffect(() => {
     const fetchModelPerformance = async () => {
       if (sessionId === 'default') return;
+      if (authLoading) return;
+      
+      if (!userId) {
+        setLoading(false);
+        return;
+      }
       
       setLoading(true);
       setError(null);
       
       try {
-        const response = await fetch(buildApiUrl(`/api/model-training/model-performance/${sessionId}`));
+        const response = await fetch(buildApiUrl(`/api/model-training/model-performance/${sessionId}?user_id=${userId}`));
         
+        if (response.status === 404) {
+          setError('MODEL_NOT_FOUND');
+          return;
+        }
+
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -118,7 +132,7 @@ export default function ModelDetail() {
     };
 
     fetchModelPerformance();
-  }, [sessionId]);
+  }, [sessionId, userId, authLoading]);
 
   // Parse confusion matrix table
   const parseConfusionMatrix = (tableString: string) => {
@@ -195,10 +209,42 @@ export default function ModelDetail() {
     });
   };
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
         <div className="text-zinc-400">Loading model performance data...</div>
+      </div>
+    );
+  }
+
+  if (!userId) {
+     return (
+       <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+         <div className="text-zinc-400">Please log in to view model performance</div>
+       </div>
+     );
+  }
+
+  if (error === 'MODEL_NOT_FOUND') {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-6">
+        <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mb-6">
+          <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </div>
+        <h1 className="text-2xl font-bold text-white mb-2">Model Data Not Found</h1>
+        <p className="text-zinc-400 text-center max-w-md mb-8">
+          We couldn't find performance metrics for this session. This typically means the training process failed or didn't complete successfully.
+        </p>
+        <div className="flex gap-4">
+            <Link href="/model-history" className="px-4 py-2 rounded-lg border border-zinc-800 text-zinc-300 hover:bg-zinc-900 transition-colors">
+                Back to History
+            </Link>
+            <Link href="/dataset-upload" className="px-4 py-2 rounded-lg bg-white text-black font-medium hover:bg-zinc-200 transition-colors">
+                Train New Model
+            </Link>
+        </div>
       </div>
     );
   }

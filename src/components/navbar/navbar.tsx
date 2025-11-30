@@ -94,10 +94,10 @@ const NavBar = ({ isLandingPage = false }: NavBarProps) => {
                 </div>
 
                 {/* Item 2: History Icon + "Model History" (Clickable) */}
-                <div className="flex items-center p-3 hover:bg-[#424242] cursor-pointer">
+                <Link href="/model-history" className="flex items-center p-3 hover:bg-[#424242] cursor-pointer">
                   <FolderIcon className="h-5 w-5 text-gray-300" />
                   <span className="ml-2">Model History</span>
-                </div>
+                </Link>
 
                 {/* Item 3: Power Icon + "Sign Out" (Clickable) */}
                 <div
