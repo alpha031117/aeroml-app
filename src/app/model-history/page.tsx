@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { buildApiUrl } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
@@ -153,6 +153,29 @@ export default function ModelHistory() {
     return 'text-zinc-400';
   };
 
+  const derivedCounts = useMemo(() => {
+    if (!data?.sessions) return { completed: 0, failed: 0, total: 0 };
+    
+    let completed = 0;
+    let failed = 0;
+    
+    data.sessions.forEach(session => {
+      const status = getDisplayStatus(session).toLowerCase();
+      if (status === 'completed') {
+        completed++;
+      } else {
+        // Anything not completed (mostly 'failed' due to getDisplayStatus logic) counts as failed
+        failed++;
+      }
+    });
+    
+    return {
+      total: data.sessions.length,
+      completed,
+      failed
+    };
+  }, [data]);
+
   const handleRowClick = (sessionId: string, status: string) => {
     // Only allow navigation if status is not failed
     if (status.toLowerCase() === 'failed') {
@@ -212,108 +235,102 @@ export default function ModelHistory() {
   return (
     <div className="flex flex-col min-h-screen bg-black text-white">
       <NavBar />
-      <div className="flex-grow">
-        {/* Header */}
-        <div className="border-b border-zinc-800 bg-zinc-900/50 backdrop-blur-sm">
-          <div className="max-w-7xl mx-auto px-6 py-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-white mb-2">Model Training History</h1>
-                <p className="text-zinc-400">Overview of your model training sessions</p>
-              </div>
-              {data && (
-                <div className="flex space-x-4">
-                  <div className="bg-zinc-900 rounded-lg px-4 py-2 border border-zinc-800">
-                    <div className="text-xs text-zinc-400 uppercase tracking-wider">Total Sessions</div>
-                    <div className="text-xl font-bold text-white">{data.total_sessions}</div>
-                  </div>
-                  <div className="bg-zinc-900 rounded-lg px-4 py-2 border border-zinc-800">
-                    <div className="text-xs text-zinc-400 uppercase tracking-wider">Completed</div>
-                    <div className="text-xl font-bold text-green-400">{data.status_counts.completed}</div>
-                  </div>
-                  <div className="bg-zinc-900 rounded-lg px-4 py-2 border border-zinc-800">
-                    <div className="text-xs text-zinc-400 uppercase tracking-wider">Failed</div>
-                    <div className="text-xl font-bold text-red-400">{data.status_counts.failed}</div>
-                  </div>
-                </div>
-              )}
-            </div>
+      <div className="flex-grow w-full max-w-7xl mx-auto px-6 py-8">
+        {/* Header Section */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+          <div>
+            <h1 className="text-2xl font-bold text-white mb-2">Model Training History</h1>
+            <p className="text-zinc-400">Overview of your model training sessions</p>
           </div>
+          {data && (
+            <div className="flex space-x-4">
+              <div className="bg-zinc-900 rounded-lg px-4 py-2 border border-zinc-800 w-32 flex flex-col items-center justify-center">
+                <div className="text-[10px] text-zinc-400 uppercase tracking-wider font-semibold mb-1">Total Sessions</div>
+                <div className="text-xl font-bold text-white">{derivedCounts.total}</div>
+              </div>
+              <div className="bg-zinc-900 rounded-lg px-4 py-2 border border-zinc-800 w-32 flex flex-col items-center justify-center">
+                <div className="text-[10px] text-zinc-400 uppercase tracking-wider font-semibold mb-1">Completed</div>
+                <div className="text-xl font-bold text-green-400">{derivedCounts.completed}</div>
+              </div>
+              <div className="bg-zinc-900 rounded-lg px-4 py-2 border border-zinc-800 w-32 flex flex-col items-center justify-center">
+                <div className="text-[10px] text-zinc-400 uppercase tracking-wider font-semibold mb-1">Failed</div>
+                <div className="text-xl font-bold text-red-400">{derivedCounts.failed}</div>
+              </div>
+            </div>
+          )}
         </div>
 
-        <div className="max-w-7xl mx-auto px-6 py-8">
-          {/* History Table */}
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-950 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left">
-                <thead>
-                  <tr className="border-b border-zinc-800 bg-zinc-900/50">
-                    <th className="py-4 px-6 font-medium text-zinc-400">Timestamp</th>
-                    <th className="py-4 px-6 font-medium text-zinc-400">Status</th>
-                    <th className="py-4 px-6 font-medium text-zinc-400">Session ID</th>
-                    <th className="py-4 px-6 font-medium text-zinc-400">Dataset Name</th>
-                    <th className="py-4 px-6 font-medium text-zinc-400">Target Variable</th>
-                    <th className="py-4 px-6 font-medium text-zinc-400 text-right">Actions</th>
+        {/* History Table */}
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-950 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead>
+                <tr className="border-b border-zinc-800 bg-zinc-900/50">
+                  <th className="py-4 px-6 font-medium text-zinc-400">Timestamp</th>
+                  <th className="py-4 px-6 font-medium text-zinc-400">Status</th>
+                  <th className="py-4 px-6 font-medium text-zinc-400">Session ID</th>
+                  <th className="py-4 px-6 font-medium text-zinc-400">Dataset Name</th>
+                  <th className="py-4 px-6 font-medium text-zinc-400">Target Variable</th>
+                  <th className="py-4 px-6 font-medium text-zinc-400 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-800">
+                {data?.sessions.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-zinc-500">
+                      No training history found
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-800">
-                  {data?.sessions.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="py-8 text-center text-zinc-500">
-                        No training history found
-                      </td>
-                    </tr>
-                  ) : (
-                    data?.sessions.map((session) => {
-                      const displayStatus = getDisplayStatus(session);
-                      const isFailed = displayStatus.toLowerCase() === 'failed';
-                      
-                      return (
-                        <tr 
-                          key={session.session_id} 
-                          onClick={() => handleRowClick(session.session_id, displayStatus)}
-                          className={`transition-colors group ${
-                            isFailed 
-                              ? 'cursor-not-allowed opacity-75' 
-                              : 'cursor-pointer hover:bg-zinc-900/50'
-                          }`}
-                        >
-                          <td className="py-4 px-6 text-zinc-300">
-                            {formatDate(session.created_at)}
-                          </td>
-                          <td className={`py-4 px-6 font-medium ${getStatusColor(displayStatus)}`}>
-                            {displayStatus}
-                          </td>
-                          <td className="py-4 px-6 font-mono text-zinc-400 group-hover:text-zinc-300 transition-colors">
-                            {session.session_id}
-                          </td>
-                          <td className="py-4 px-6 text-zinc-300">
-                            {session.metadata.original_filename}
-                          </td>
-                          <td className="py-4 px-6 text-zinc-300">
-                            <span className="px-2 py-1 rounded bg-zinc-900 border border-zinc-800">
-                              {session.metadata.target_variable}
-                            </span>
-                          </td>
-                          <td className="py-4 px-6 text-right">
-                            {!isFailed && (
-                              <Button
-                                variant="outline"
-                                className="cursor-pointer hover:bg-zinc-800 border-zinc-700"
-                                onClick={(e) => handleTestModel(e, session.session_id)}
-                                icon={<PaperPlaneIcon className="w-3 h-3" />}
-                              >
-                                Test Model
-                              </Button>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
+                ) : (
+                  data?.sessions.map((session) => {
+                    const displayStatus = getDisplayStatus(session);
+                    const isFailed = displayStatus.toLowerCase() === 'failed';
+                    
+                    return (
+                      <tr 
+                        key={session.session_id} 
+                        onClick={() => handleRowClick(session.session_id, displayStatus)}
+                        className={`transition-colors group ${
+                          isFailed 
+                            ? 'cursor-not-allowed opacity-75' 
+                            : 'cursor-pointer hover:bg-zinc-900/50'
+                        }`}
+                      >
+                        <td className="py-4 px-6 text-zinc-300">
+                          {formatDate(session.created_at)}
+                        </td>
+                        <td className={`py-4 px-6 font-medium ${getStatusColor(displayStatus)}`}>
+                          {displayStatus}
+                        </td>
+                        <td className="py-4 px-6 font-mono text-zinc-400 group-hover:text-zinc-300 transition-colors">
+                          {session.session_id}
+                        </td>
+                        <td className="py-4 px-6 text-zinc-300">
+                          {session.metadata.original_filename}
+                        </td>
+                        <td className="py-4 px-6 text-zinc-300">
+                          <span className="px-2 py-1 rounded bg-zinc-900 border border-zinc-800">
+                            {session.metadata.target_variable}
+                          </span>
+                        </td>
+                        <td className="py-4 px-6 text-right">
+                          {!isFailed && (
+                            <Button
+                              variant="outline"
+                              className="cursor-pointer hover:bg-zinc-800 border-zinc-700"
+                              onClick={(e) => handleTestModel(e, session.session_id)}
+                              icon={<PaperPlaneIcon className="w-3 h-3" />}
+                            >
+                              Test Model
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
