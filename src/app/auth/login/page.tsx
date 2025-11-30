@@ -8,11 +8,16 @@ import Image from 'next/image';
 import { faGoogle } from '@fortawesome/free-brands-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import Loader from '@/components/loader/loader'; // Import your Loader component
+import { useUser } from '@/contexts/UserContext'; // Import useUser hook
+import { buildApiUrl } from '@/lib/api'; // Import API utility
 
 const SignIn = () => {
   const [providers, setProviders] = useState<any>(null);
-  const [credentials, setCredentials] = useState({ username: '', password: '' });
+  const [credentials, setCredentials] = useState({ email: '', password: '' });
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();  // Initialize the router
+  const { setUser } = useUser(); // Get setUser function from context
 
   // Fetch providers on component mount
   useEffect(() => {
@@ -31,18 +36,46 @@ const SignIn = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const result = await signIn('credentials', {
-      username: credentials.username,
-      password: credentials.password,
-      callbackUrl: '/model-prompt',  // Set the redirect URL
-    });
+    setIsLoading(true);
+    setError(null);
 
-    // Optionally, check if the result is successful
-    if (result?.ok) {
-      router.push('/model-prompt');  // Manually navigate to /model-prompt
-    } else {
-      // Handle error or show message (optional)
-      console.log('Login failed');
+    try {
+      // Call the login API
+      const response = await fetch(buildApiUrl('/api/users/login'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: credentials.email,
+          password: credentials.password,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Login failed' }));
+        throw new Error(errorData.message || 'Login failed. Please check your credentials.');
+      }
+
+      const userData = await response.json();
+
+      // Store user data in global context
+      setUser({
+        id: userData.id,
+        email: userData.email,
+        full_name: userData.full_name,
+        is_active: userData.is_active,
+        created_at: userData.created_at,
+      });
+
+      // Redirect to model-prompt page
+      router.push('/model-prompt');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Login failed. Please try again.';
+      setError(errorMessage);
+      console.error('Login error:', err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -64,16 +97,24 @@ const SignIn = () => {
           />
         </div>
         <h2 className="text-2xl font-semibold text-center text-white mb-6">Sign In Your Account</h2>
+        {/* Error message */}
+        {error && (
+          <div className="mb-4 p-3 bg-red-500/20 border border-red-500 rounded-md">
+            <p className="text-red-200 text-sm">{error}</p>
+          </div>
+        )}
         {/* Form */}
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <input
-              type="text"
-              name="username"
+              type="email"
+              name="email"
               placeholder="Email address*"
-              value={credentials.username}
+              value={credentials.email}
               onChange={handleChange}
-              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+              disabled={isLoading}
+              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
 
@@ -84,15 +125,18 @@ const SignIn = () => {
               placeholder="Password*"
               value={credentials.password}
               onChange={handleChange}
-              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+              disabled={isLoading}
+              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
 
           <button
             type="submit"
-            className="w-full p-3 bg-white text-black rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4 cursor-pointer"
+            disabled={isLoading}
+            className="w-full p-3 bg-white text-black rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Sign In
+            {isLoading ? 'Signing In...' : 'Sign In'}
           </button>
         </form>
 

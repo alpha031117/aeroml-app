@@ -10,6 +10,7 @@ import TrainingDropdownTextarea from '@/components/training_textarea/TrainingDro
 import Loader from '@/components/loader/loader';
 import { Button } from '@/components/ui';
 import { Bot, FileText } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth'; // Import useAuth hook
 
 // Define the training log interface
 interface TrainingLog {
@@ -69,6 +70,7 @@ interface TrainingData {
 export default function ModelTraining() {
     const searchParams = useSearchParams();
     const router = useRouter();
+    const { userId, isAuthenticated, isLoading: authLoading, authMethod } = useAuth(); // Use useAuth hook to get userId from both auth methods
     const [isLoading, setIsLoading] = useState(true);
     const [trainingData, setTrainingData] = useState<TrainingData | null>(null);
     const [datasetData, setDatasetData] = useState<MinimalDatasetData | null>(null);
@@ -364,6 +366,19 @@ export default function ModelTraining() {
             alert('No dataset data or file available. Please go back and upload a dataset.');
             return;
         }
+        
+        // Wait for auth to finish loading
+        if (authLoading) {
+            alert('Please wait while we verify your authentication...');
+            return;
+        }
+        
+        if (!isAuthenticated || !userId) {
+            console.error('Authentication check failed:', { isAuthenticated, userId, authMethod });
+            alert('No authenticated user found. Please sign in again before starting training.');
+            router.push('/auth/login');
+            return;
+        }
 
         setIsTraining(true);
         setTrainingStatus('starting');
@@ -374,6 +389,7 @@ export default function ModelTraining() {
             const formData = new FormData();
             formData.append('file', rawFile, datasetData.fileInfo.name);
             formData.append('target_variable', datasetData.targetColumn || '');
+            formData.append('user_id', userId);
 
             console.log('Starting training with target variable:', datasetData.targetColumn);
 
