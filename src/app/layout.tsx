@@ -2,6 +2,7 @@
 import { getServerSession } from "next-auth";  // Import getServerSession
 import { authOptions } from "../pages/api/auth/[...nextauth]"; // Import your NextAuth options
 import ClientSessionWrapper from "../components/ClientSessionWrapper"; // Import the wrapper
+import { UserProvider } from "../contexts/UserContext"; // Import UserProvider
 import { Geist, Geist_Mono } from 'next/font/google'; 
 import { Metadata } from "next";  // Import Metadata for SEO
 import "./globals.css";  // Import global styles
@@ -44,10 +45,12 @@ export default async function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {/* Wrap children with ClientSessionWrapper */}
-        <ClientSessionWrapper session={session}>
-          {children}
-        </ClientSessionWrapper>
+        {/* Wrap children with UserProvider and ClientSessionWrapper */}
+        <UserProvider>
+          <ClientSessionWrapper session={session}>
+            {children}
+          </ClientSessionWrapper>
+        </UserProvider>
       </body>
     </html>
   );

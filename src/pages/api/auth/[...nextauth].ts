@@ -49,17 +49,29 @@ export const authOptions = {
     signIn: "/auth/login",  // Optional custom sign-in page
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
       // Handle JWT token creation/update
       if (user) {
+        // Store user ID (for Google OAuth, this is the Google account ID - token_id)
         token.id = user.id;
+        // Store provider info to identify auth method
+        if (account) {
+          token.provider = account.provider;
+        }
       }
       return token;
     },
     async session({ session, token }) {
       // Handle session creation
       if (token) {
-        session.user = { ...session.user, id: token.id as string };
+        session.user = { 
+          ...session.user, 
+          id: token.id as string, // This is the token_id for Google auth
+        };
+        // Add provider info to session if needed
+        if (token.provider) {
+          (session as any).provider = token.provider;
+        }
       }
       return session;
     },

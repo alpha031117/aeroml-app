@@ -1,11 +1,13 @@
 'use client'; // Ensure this is a client-side component
 
-import { useSession, signOut } from "next-auth/react"; // Import necessary hooks from NextAuth
+import { signOut } from "next-auth/react"; // Import signOut from NextAuth
 import { useState, useEffect, useRef } from "react"; // Import useState, useEffect, and useRef
 import { UserIcon, FolderIcon } from "@heroicons/react/24/outline"; // Import icons from Heroicons
 import Link from "next/link"; // Import Link for navigation
 import { ArrowRightOnRectangleIcon } from "@heroicons/react/24/outline"; // Import SignOut icon from Heroicons
 import Image from "next/image"; // Import Image for optimized image loading
+import { useUser } from "@/contexts/UserContext"; // Import useUser hook
+import { useAuth } from "@/hooks/useAuth"; // Import useAuth hook
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
@@ -14,19 +16,19 @@ interface NavBarProps {
 }
 
 const NavBar = ({ isLandingPage = false }: NavBarProps) => {
-  const { data: session, status } = useSession(); // Use useSession to get session data
+  const { clearUser } = useUser(); // Get clearUser function from context
+  const { isAuthenticated, displayName, firstLetter, authMethod, isLoading } = useAuth(); // Get auth status and user info
   const [isDropdownOpen, setIsDropdownOpen] = useState(false); // State to control dropdown visibility
   const dropdownRef = useRef<HTMLDivElement>(null); // Reference for the dropdown to detect outside clicks
 
   const handleSignOut = () => {
-    signOut({ callbackUrl: '/' }); // Optionally, redirect user after sign out
+    clearUser(); // Clear user data from context
+    signOut({ callbackUrl: '/' }); // Clear NextAuth session and redirect
   };
 
   const toggleDropdown = () => {
     setIsDropdownOpen(!isDropdownOpen); // Toggle dropdown visibility
   };
-
-  const firstLetter = session?.user?.name?.charAt(0).toUpperCase(); // Get the first letter of the username
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -56,9 +58,12 @@ const NavBar = ({ isLandingPage = false }: NavBarProps) => {
         <span className="text-white font-bold text-lg">AEROML</span>
       </div>
 
-      {/* Conditionally Render Content Based on Session */}
+      {/* Conditionally Render Content Based on Authentication */}
       <div className="flex items-center gap-4">
-        {!session ? (
+        {isLoading ? (
+          // Show loading state
+          <div className="w-10 h-10 rounded-full bg-gray-600 animate-pulse"></div>
+        ) : !isAuthenticated ? (
           // If not logged in, show the "Get Started" button
           <Link href="/auth/login">
             <button className="bg-white text-black px-4 py-2 rounded-md font-medium hover:bg-gray-200 transition cursor-pointer">
@@ -66,13 +71,13 @@ const NavBar = ({ isLandingPage = false }: NavBarProps) => {
             </button>
           </Link>
         ) : (
-          // If logged in, show the user's name and a sign-out button
+          // If logged in, show the user's info and a sign-out button
           <div className="relative">
             <button
               onClick={toggleDropdown}
               className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-600 text-white font-bold cursor-pointer"
             >
-              {firstLetter}
+              {firstLetter || '?'}
             </button>
 
             {/* Dropdown */}
@@ -82,10 +87,10 @@ const NavBar = ({ isLandingPage = false }: NavBarProps) => {
                 className="absolute right-0 mt-2 w-48 rounded-lg shadow-lg text-white z-10"
                 style={{ backgroundColor: "#1A1A1A" }} // Custom dark grey background color
               >
-                {/* Item 1: User Icon + Username (Non-clickable) */}
+                {/* Item 1: User Icon + Display Name (Non-clickable) */}
                 <div className="flex items-center p-3 cursor-default">
                   <UserIcon className="h-5 w-5 text-gray-300" />
-                  <span className="ml-2">{session.user?.name}</span>
+                  <span className="ml-2 truncate">{displayName || 'User'}</span>
                 </div>
 
                 {/* Item 2: History Icon + "Model History" (Clickable) */}
