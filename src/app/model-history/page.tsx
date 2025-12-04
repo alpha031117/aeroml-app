@@ -271,7 +271,7 @@ export default function ModelHistory() {
                   <th className="py-4 px-6 font-medium text-zinc-400">Session ID</th>
                   <th className="py-4 px-6 font-medium text-zinc-400">Dataset Name</th>
                   <th className="py-4 px-6 font-medium text-zinc-400">Target Variable</th>
-                  <th className="py-4 px-6 font-medium text-zinc-400 text-right">Actions</th>
+                  <th className="py-4 px-6 font-medium text-zinc-400 text-right whitespace-nowrap min-w-[140px]">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800">
@@ -313,16 +313,18 @@ export default function ModelHistory() {
                             {session.metadata.target_variable}
                           </span>
                         </td>
-                        <td className="py-4 px-6 text-right">
+                        <td className="py-4 px-6 text-right whitespace-nowrap min-w-[140px]">
                           {!isFailed && (
-                            <Button
-                              variant="outline"
-                              className="cursor-pointer hover:bg-zinc-800 border-zinc-700"
-                              onClick={(e) => handleTestModel(e, session.session_id)}
-                              icon={<PaperPlaneIcon className="w-3 h-3" />}
-                            >
-                              Test Model
-                            </Button>
+                            <div className="inline-flex justify-end w-full">
+                              <Button
+                                variant="outline"
+                                className="cursor-pointer hover:bg-zinc-800 border-zinc-700 whitespace-nowrap shrink-0"
+                                onClick={(e) => handleTestModel(e, session.session_id)}
+                                icon={<PaperPlaneIcon className="w-3 h-3" />}
+                              >
+                                Test Model
+                              </Button>
+                            </div>
                           )}
                         </td>
                       </tr>
