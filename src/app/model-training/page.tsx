@@ -577,7 +577,7 @@ export default function ModelTraining() {
 
     const handleAIEnhancement = () => {
         if (sessionId) {
-            router.push(`/ml-recommendation?session_id=${sessionId}`);
+            router.push(`/model-enhancement?session_id=${sessionId}`);
         } else {
             alert('No session ID available. Please complete training first.');
         }
