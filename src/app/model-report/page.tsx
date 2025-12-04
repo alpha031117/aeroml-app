@@ -5,6 +5,7 @@ import { Loader2 } from "lucide-react";
 import NavBar from "@/components/navbar/navbar";
 import { Button } from "@/components/ui/button";
 import { buildApiUrl } from "@/lib/api";
+import { useAuth } from "@/hooks/useAuth";
 
 // Type definition for model data
 interface ModelData {
@@ -33,6 +34,7 @@ type SortKey = keyof ModelData;
 type SortDirection = 'asc' | 'desc';
 
 export default function ModelReport() {
+  const { userId, isLoading: authLoading } = useAuth();
   const [sortKey, setSortKey] = useState<SortKey>('auc');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [modelData, setModelData] = useState<ModelData[]>([]);
@@ -54,12 +56,19 @@ export default function ModelReport() {
   useEffect(() => {
     const fetchModelData = async () => {
       if (sessionId === 'default') return; // Don't fetch if sessionId hasn't been extracted yet
+      if (authLoading) return; // Wait for auth to finish loading
+      
+      if (!userId) {
+        setLoading(false);
+        setError('User authentication required. Please sign in again.');
+        return;
+      }
       
       setLoading(true);
       setError(null);
       
       try {
-        const response = await fetch(buildApiUrl(`/api/model-training/h2o-leaderboard/${sessionId}`));
+        const response = await fetch(buildApiUrl(`/api/model-training/model-performance/${sessionId}?user_id=${userId}`));
         
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -91,7 +100,7 @@ export default function ModelReport() {
     };
 
     fetchModelData();
-  }, [sessionId]);
+  }, [sessionId, userId, authLoading]);
 
   // Sort the data based on current sort key and direction
   const sortedData = useMemo(() => {

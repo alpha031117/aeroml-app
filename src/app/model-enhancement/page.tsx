@@ -8,6 +8,8 @@ import Loader from '@/components/loader/loader';
 import { Button } from '@/components/ui';
 import { Badge } from '@/components/ui/badge';
 import { Bot, CheckCircle, AlertCircle, Code, BookOpen, Settings, TrendingUp, Download, ArrowLeft } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { buildApiUrl } from '@/lib/api';
 
 // Interface for the API response
 interface MLRecommendationResponse {
@@ -33,9 +35,11 @@ interface RecommendationStep {
 
 export default function ModelEnhancement() {
   const searchParams = useSearchParams();
+  const { userId, isLoading: authLoading } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [recommendations, setRecommendations] = useState<MLRecommendationResponse | null>(null);
   const [parsedSteps, setParsedSteps] = useState<RecommendationStep[]>([]);
+  const [introText, setIntroText] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
 
@@ -43,17 +47,29 @@ export default function ModelEnhancement() {
     const sessionIdParam = searchParams?.get('session_id');
     if (sessionIdParam) {
       setSessionId(sessionIdParam);
-      fetchRecommendations(sessionIdParam);
+      if (!authLoading && userId) {
+        fetchRecommendations(sessionIdParam);
+      }
     } else {
       setError('No session ID provided. Please complete model training first.');
       setIsLoading(false);
     }
-  }, [searchParams]);
+  }, [searchParams, userId, authLoading]);
 
   const fetchRecommendations = async (sessionId: string) => {
+    if (authLoading) {
+      return; // Wait for auth to finish loading
+    }
+    
+    if (!userId) {
+      setError('User authentication required. Please sign in again.');
+      setIsLoading(false);
+      return;
+    }
+    
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/model-training/h2o-ml-recommendations/${sessionId}`
+        buildApiUrl(`/api/model-training/h2o-ml-recommendations/${sessionId}?user_id=${userId}`)
       );
 
       if (!response.ok) {
@@ -63,8 +79,9 @@ export default function ModelEnhancement() {
       const data: MLRecommendationResponse = await response.json();
       setRecommendations(data);
       
-      // Parse the markdown recommendations into structured steps
-      const steps = parseRecommendations(data.ml_recommendations);
+      // Parse the markdown recommendations into intro text and structured steps
+      const { intro, steps } = parseRecommendations(data.ml_recommendations);
+      setIntroText(intro);
       setParsedSteps(steps);
       
     } catch (err) {
@@ -75,39 +92,69 @@ export default function ModelEnhancement() {
     }
   };
 
-  const parseRecommendations = (markdown: string): RecommendationStep[] => {
+  const parseRecommendations = (markdown: string): { intro: string; steps: RecommendationStep[] } => {
     const steps: RecommendationStep[] = [];
-    
-    // Split by numbered sections (1. 2. 3. etc.)
-    const sections = markdown.split(/(?=\d+\.\s\*\*)/);
+
+    // Separate intro text (everything before the first numbered step)
+    const firstStepMatch = markdown.match(/^\d+\.\s\*\*/m);
+    let intro = '';
+    let stepsMarkdown = markdown;
+
+    if (firstStepMatch && firstStepMatch.index !== undefined) {
+      intro = markdown.slice(0, firstStepMatch.index).trim();
+      stepsMarkdown = markdown.slice(firstStepMatch.index);
+    }
+
+    // Clean intro by stripping leading markdown headings like "# Recommended ML Steps:"
+    let cleanedIntro = intro
+      .replace(/^#+\s*/gm, '') // remove leading "#" from headings
+      .trim();
+
+    // Drop the first line if it is the label "Recommended ML Steps:"
+    if (cleanedIntro) {
+      const introLines = cleanedIntro.split('\n').map(line => line.trim());
+      if (introLines[0].toLowerCase().startsWith('recommended ml steps')) {
+        cleanedIntro = introLines.slice(1).join('\n').trim();
+      }
+    }
+
+    // Split by numbered sections (1. 2. 3. etc.), respecting line starts
+    const sections = stepsMarkdown.split(/(?=^\d+\.\s\*\*)/m);
     
     sections.forEach((section, index) => {
-      if (section.trim()) {
-        // Extract title (between ** **)
-        const titleMatch = section.match(/\*\*(.*?)\*\*/);
-        const title = titleMatch ? titleMatch[1] : `Step ${index + 1}`;
-        
-        // Extract description (text before code block)
-        const descriptionMatch = section.match(/\*\*.*?\*\*:\s*([\s\S]*?)(?=```|$)/);
-        const description = descriptionMatch ? descriptionMatch[1].trim() : '';
-        
-        // Extract code example (between ``` ```)
-        const codeMatch = section.match(/```(?:python)?\s*([\s\S]*?)```/);
-        const codeExample = codeMatch ? codeMatch[1].trim() : undefined;
-        
-        if (title && description) {
-          steps.push({
-            id: index + 1,
-            title: title.replace(/^\d+\.\s*/, ''), // Remove number prefix
-            description,
-            codeExample,
-            isCompleted: false
-          });
-        }
+      const trimmed = section.trim();
+      if (!trimmed) return;
+
+      // Extract title (e.g. "1. **Identify the Target Variable:**")
+      const titleMatch = trimmed.match(/\d+\.\s\*\*(.*?)\*\*/);
+      const rawTitle = titleMatch ? titleMatch[1] : `Step ${index + 1}`;
+
+      // Remove the leading "1. **Title**" part to get the body
+      const body = titleMatch
+        ? trimmed.slice(titleMatch.index! + titleMatch[0].length).trim()
+        : trimmed;
+
+      // Extract code example (between ``` ```), if present
+      const codeMatch = body.match(/```(?:python)?\s*([\s\S]*?)```/);
+      const codeExample = codeMatch ? codeMatch[1].trim() : undefined;
+
+      // Description is everything before the code block (or entire body if none)
+      const description = codeMatch
+        ? body.slice(0, codeMatch.index).trim()
+        : body.trim();
+
+      if (rawTitle && description) {
+        steps.push({
+          id: index + 1,
+          title: rawTitle.replace(/^\d+\.\s*/, ''), // Just in case number leaked in
+          description,
+          codeExample,
+          isCompleted: false,
+        });
       }
     });
     
-    return steps;
+    return { intro: cleanedIntro, steps };
   };
 
   const toggleStepCompletion = (stepId: number) => {
@@ -136,6 +183,41 @@ export default function ModelEnhancement() {
       return <Code className="w-5 h-5 text-cyan-400" />;
     }
     return <BookOpen className="w-5 h-5 text-gray-400" />;
+  };
+
+  // Format description:
+  // - remove leading "-" from the first sentence
+  // - for subsequent " - " in the same step, break into new lines
+  // - render **text** segments as bold
+  const renderDescription = (description: string) => {
+    if (!description) return null;
+
+    // Remove first leading "-" (and any following spaces)
+    let cleaned = description.replace(/^-+\s*/, '');
+
+    // For subsequent "- " within the same string, break into new lines
+    cleaned = cleaned.replace(/\s+-\s+/g, '\n');
+
+    const lines = cleaned.split('\n').filter(line => line.trim().length > 0);
+
+    const renderWithBold = (text: string) => {
+      const parts = text.split(/\*\*/);
+      return parts.map((part, idx) =>
+        idx % 2 === 1 ? (
+          <span key={idx} className="font-semibold">
+            {part}
+          </span>
+        ) : (
+          part
+        )
+      );
+    };
+
+    return lines.map((line, idx) => (
+      <p key={idx} className="text-gray-300 leading-relaxed mb-1">
+        {renderWithBold(line.trim())}
+      </p>
+    ));
   };
 
   if (isLoading) {
@@ -230,7 +312,12 @@ export default function ModelEnhancement() {
 
           {/* Recommendation Steps */}
           <div className="space-y-6">
-            <h2 className="text-2xl font-semibold text-white mb-6">Recommended Enhancement Steps</h2>
+            <h2 className="text-2xl font-semibold text-white mb-2">Recommended Enhancement Steps</h2>
+            {introText && (
+              <p className="text-sm text-gray-400 mb-6 whitespace-pre-line">
+                {introText}
+              </p>
+            )}
             
             {parsedSteps.map((step, index) => (
               <div 
@@ -261,9 +348,9 @@ export default function ModelEnhancement() {
                         </Button>
                       </div>
                       
-                      <p className="text-gray-300 leading-relaxed mb-4">
-                        {step.description}
-                      </p>
+                      <div className="mb-4">
+                        {renderDescription(step.description)}
+                      </div>
                       
                       {step.codeExample && (
                         <div className="bg-zinc-950 rounded-lg border border-zinc-700 p-4">
