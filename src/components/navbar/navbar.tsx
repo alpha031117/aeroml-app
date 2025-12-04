@@ -1,118 +1,190 @@
-'use client'; // Ensure this is a client-side component
+'use client';
 
-import { signOut } from "next-auth/react"; // Import signOut from NextAuth
-import { useState, useEffect, useRef } from "react"; // Import useState, useEffect, and useRef
-import { UserIcon, FolderIcon } from "@heroicons/react/24/outline"; // Import icons from Heroicons
-import Link from "next/link"; // Import Link for navigation
-import { ArrowRightOnRectangleIcon } from "@heroicons/react/24/outline"; // Import SignOut icon from Heroicons
-import Image from "next/image"; // Import Image for optimized image loading
-import { useUser } from "@/contexts/UserContext"; // Import useUser hook
-import { useAuth } from "@/hooks/useAuth"; // Import useAuth hook
+import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { usePathname } from "next/navigation";
+import { signOut } from "next-auth/react";
+import { 
+  Bell, 
+  Menu, 
+  X, 
+    LogOut,
+    History,
+    LayoutDashboard,
+    BookOpen,  ChevronDown
+} from "lucide-react";
+import { useUser } from "@/contexts/UserContext";
+import { useAuth } from "@/hooks/useAuth";
 
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+const NavBar = () => {
+  const pathname = usePathname();
+  const { clearUser } = useUser();
+  const { isAuthenticated, displayName, firstLetter, isLoading } = useAuth();
+  
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-interface NavBarProps {
-  isLandingPage?: boolean;
-}
-
-const NavBar = ({ isLandingPage = false }: NavBarProps) => {
-  const { clearUser } = useUser(); // Get clearUser function from context
-  const { isAuthenticated, displayName, firstLetter, authMethod, isLoading } = useAuth(); // Get auth status and user info
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false); // State to control dropdown visibility
-  const dropdownRef = useRef<HTMLDivElement>(null); // Reference for the dropdown to detect outside clicks
+  // Navigation Links Configuration
+  const navLinks = [
+    { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+    { name: 'Model History', href: '/model-history', icon: History },
+    { name: 'Documentation', href: '/documentation', icon: BookOpen },
+  ];
 
   const handleSignOut = () => {
-    clearUser(); // Clear user data from context
-    signOut({ callbackUrl: '/' }); // Clear NextAuth session and redirect
-  };
-
-  const toggleDropdown = () => {
-    setIsDropdownOpen(!isDropdownOpen); // Toggle dropdown visibility
+    clearUser();
+    signOut({ callbackUrl: '/' });
   };
 
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsDropdownOpen(false); // Close dropdown if clicked outside
+        setIsDropdownOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Close mobile menu on route change
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
+
+  const isActive = (path: string) => pathname === path;
+
   return (
-    <header className={`w-full flex justify-between items-center px-6 py-4 shadow-md ${isLandingPage ? 'bg-[#080609]' : 'bg-black'}`}>
-      {/* Logo + Title */}
-      <div className="flex items-center gap-3">
-        <Image
-          src="/images/aeroml-icon.png"
-          alt="AeroML Logo"
-          width={45}
-          height={45}
-          priority
-        />
-        <span className="text-white font-bold text-lg">AEROML</span>
-      </div>
-
-      {/* Conditionally Render Content Based on Authentication */}
-      <div className="flex items-center gap-4">
-        {isLoading ? (
-          // Show loading state
-          <div className="w-10 h-10 rounded-full bg-gray-600 animate-pulse"></div>
-        ) : !isAuthenticated ? (
-          // If not logged in, show the "Get Started" button
-          <Link href="/auth/login">
-            <button className="bg-white text-black px-4 py-2 rounded-md font-medium hover:bg-gray-200 transition cursor-pointer">
-              Get Started
-            </button>
+    <>
+      <nav 
+        className={`
+          sticky top-0 z-50 
+          w-full px-6 py-3
+          transition-all duration-300
+          bg-black/80 backdrop-blur-md border-b border-white/10
+        `}
+      >
+        <div className="max-w-7xl mx-auto flex justify-between items-center">
+          
+          {/* LEFT SECTION: Branding */}
+          <Link href="/" className="flex items-center gap-2 group">
+            <span className="flex items-center gap-2">
+              <span className="relative w-8 h-8 transition-transform group-hover:scale-105 flex-shrink-0 flex items-center">
+                <Image
+                  src="/images/aeroml-icon.png"
+                  alt="AeroML Logo"
+                  width={32}
+                  height={32}
+                  priority
+                />
+              </span>
+              <span className="text-white font-bold text-xl tracking-wide font-sans">
+                AEROML
+              </span>
+            </span>
           </Link>
-        ) : (
-          // If logged in, show the user's info and a sign-out button
-          <div className="relative">
-            <button
-              onClick={toggleDropdown}
-              className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-600 text-white font-bold cursor-pointer"
-            >
-              {firstLetter || '?'}
-            </button>
 
-            {/* Dropdown */}
-            {isDropdownOpen && (
-              <div
-                ref={dropdownRef}
-                className="absolute right-0 mt-2 w-48 rounded-lg shadow-lg text-white z-10"
-                style={{ backgroundColor: "#1A1A1A" }} // Custom dark grey background color
+          {/* MIDDLE SECTION: Desktop Navigation */}
+          <div className="hidden md:flex items-center gap-8">
+            {isAuthenticated && navLinks.map((link) => (
+              <Link 
+                key={link.name}
+                href={link.href}
+                className={`
+                  relative text-sm font-medium transition-all duration-200
+                  ${isActive(link.href) 
+                    ? 'text-white' 
+                    : 'text-gray-400 hover:text-white'}
+                `}
               >
-                {/* Item 1: User Icon + Display Name (Non-clickable) */}
-                <div className="flex items-center p-3 cursor-default">
-                  <UserIcon className="h-5 w-5 text-gray-300" />
-                  <span className="ml-2 truncate">{displayName || 'User'}</span>
+                {link.name}
+                {isActive(link.href) && (
+                  <span className="absolute -bottom-5 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-white rounded-full shadow-[0_0_8px_rgba(255,255,255,0.8)]" />
+                )}
+              </Link>
+            ))}
+          </div>
+
+          {/* RIGHT SECTION: User Actions */}
+          <div className="flex items-center gap-5">
+            {isLoading ? (
+              <div className="w-10 h-10 rounded-full bg-zinc-800 animate-pulse" />
+            ) : !isAuthenticated ? (
+              <Link href="/auth/login">
+                <button className="bg-white text-black px-5 py-2 rounded-full font-medium text-sm hover:bg-gray-200 transition-all shadow-lg hover:shadow-white/10">
+                  Get Started
+                </button>
+              </Link>
+            ) : (
+              <>
+                {/* Profile Dropdown */}
+                <div className="relative" ref={dropdownRef}>
+                  <button
+                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                    className="flex items-center gap-2 focus:outline-none group"
+                  >
+                    <div className="w-9 h-9 rounded-full bg-zinc-800 flex items-center justify-center text-white font-bold border border-white/10 group-hover:border-white/30 transition-all">
+                      {firstLetter || 'U'}
+                    </div>
+                    <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {isDropdownOpen && (
+                    <div className="absolute right-0 mt-3 w-56 rounded-xl shadow-2xl bg-zinc-900 border border-zinc-800 overflow-hidden ring-1 ring-black/5 z-50 origin-top-right animate-in fade-in zoom-in-95 duration-100">
+                      <div className="px-4 py-3 border-b border-zinc-800">
+                        <p className="text-sm text-white font-medium truncate">{displayName || 'User'}</p>
+                        <p className="text-xs text-zinc-500">Pro Plan</p>
+                      </div>
+                      
+                      <div className="p-1 border-t border-zinc-800">
+                        <button
+                          onClick={handleSignOut}
+                          className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors"
+                        >
+                          <LogOut className="w-4 h-4" />
+                          Sign Out
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                {/* Item 2: History Icon + "Model History" (Clickable) */}
-                <Link href="/model-history" className="flex items-center p-3 hover:bg-[#424242] cursor-pointer">
-                  <FolderIcon className="h-5 w-5 text-gray-300" />
-                  <span className="ml-2">Model History</span>
-                </Link>
-
-                {/* Item 3: Power Icon + "Sign Out" (Clickable) */}
-                <div
-                  onClick={handleSignOut}
-                  className="flex items-center p-3 border-t border-gray-600 hover:bg-[#424242] cursor-pointer"
+                {/* Mobile Menu Toggle */}
+                <button 
+                  className="md:hidden text-white p-1"
+                  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                 >
-                  <ArrowRightOnRectangleIcon  className="h-5 w-5" /> {/* Using FontAwesomeIcon for Sign Out */}
-                  <span className="ml-2">Sign Out</span>
-                </div>
-              </div>
+                  {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+                </button>
+              </>
             )}
           </div>
-        )}
-      </div>
-    </header>
+        </div>
+      </nav>
+
+      {/* Mobile Menu Overlay */}
+      {isMobileMenuOpen && isAuthenticated && (
+        <div className="fixed inset-0 top-[65px] z-40 bg-black/95 backdrop-blur-xl md:hidden animate-in slide-in-from-top-5">
+          <div className="flex flex-col p-6 gap-4">
+            {navLinks.map((link) => (
+              <Link
+                key={link.name}
+                href={link.href}
+                className={`
+                  flex items-center gap-4 p-4 rounded-xl text-lg font-medium transition-all
+                  ${isActive(link.href) ? 'bg-zinc-900 text-white' : 'text-zinc-400 hover:text-white hover:bg-zinc-900/50'}
+                `}
+              >
+                <link.icon className="w-5 h-5" />
+                {link.name}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 
