@@ -11,6 +11,7 @@ import Loader from '@/components/loader/loader';
 import { Button } from '@/components/ui';
 import { Bot, FileText } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth'; // Import useAuth hook
+import ProgressStepper from "@/components/ProgressStepper";
 
 // Define the training log interface
 interface TrainingLog {
@@ -609,6 +610,7 @@ export default function ModelTraining() {
         <div className="flex flex-col min-h-screen overflow-y-hidden bg-black">
             {/* Nav Bar */}
             <NavBar />
+            <ProgressStepper currentStep={3} />
             <div>
             <section className="w-full max-w-5xl mx-auto px-4 py-16 text-white flex-grow">
                 {/* Section Title */}
@@ -719,7 +721,7 @@ export default function ModelTraining() {
                     <TrainingDropdownTextarea 
                       trainingData={{
                         ...trainingData,
-                        trainingLogs: trainingLogs.length > 0 ? trainingLogs : trainingData.trainingLogs
+                        trainingLogs: trainingStatus === 'idle' ? [] : trainingLogs
                       }} 
                     />
                 </div>

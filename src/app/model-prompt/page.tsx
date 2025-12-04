@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Footer from "@/components/footer/footer";
 import NavBar from "@/components/navbar/navbar";
+import ProgressStepper from "@/components/ProgressStepper";
 import { PaperPlaneIcon } from "@radix-ui/react-icons";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import axios from 'axios'; // Import axios for making HTTP requests
@@ -40,11 +41,15 @@ export default function ModelPrompt() {
     <div className="flex flex-col min-h-screen overflow-y-hidden bg-black">
         {/* Nav Bar */}
         <NavBar />
+        
+        {/* Progress Stepper - Step 1: Model Prompt */}
+        <ProgressStepper currentStep={1} />
+
         <div
             ref={ref}
             className={`float-in ${show ? "show" : ""}`}
         >
-          <section className="w-full max-w-5xl mt-12 mx-auto px-4 py-16 text-white flex-grow">
+          <section className="w-full max-w-5xl mx-auto px-4 py-16 text-white flex-grow">
               {/* Section Title */}
               <div className="mb-6">
                   <h4 className="text-xl text-gray-400 mb-2">Model Selection</h4>

@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { buildApiUrl } from '@/lib/api';
 import { StatCard } from '@/components/ui/stat-card';
 import { useAuth } from '@/hooks/useAuth';
+import NavBar from "@/components/navbar/navbar";
+import Footer from "@/components/footer/footer";
 
 // Type definitions for the API response
 interface KeyMetrics {
@@ -211,56 +213,76 @@ export default function ModelDetail() {
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-        <div className="text-zinc-400">Loading model performance data...</div>
+      <div className="flex flex-col min-h-screen bg-zinc-950 text-white">
+        <NavBar />
+        <div className="flex-grow flex items-center justify-center">
+          <div className="text-zinc-400">Loading model performance data...</div>
+        </div>
+        <Footer />
       </div>
     );
   }
 
   if (!userId) {
      return (
-       <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-         <div className="text-zinc-400">Please log in to view model performance</div>
+       <div className="flex flex-col min-h-screen bg-zinc-950 text-white">
+         <NavBar />
+         <div className="flex-grow flex items-center justify-center">
+           <div className="text-zinc-400">Please log in to view model performance</div>
+         </div>
+         <Footer />
        </div>
      );
   }
 
   if (error === 'MODEL_NOT_FOUND') {
     return (
-      <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-6">
-        <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mb-6">
-          <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
+      <div className="flex flex-col min-h-screen bg-zinc-950 text-white">
+        <NavBar />
+        <div className="flex-grow flex flex-col items-center justify-center p-6">
+          <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mb-6">
+            <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold text-white mb-2">Model Data Not Found</h1>
+          <p className="text-zinc-400 text-center max-w-md mb-8">
+            We couldn't find performance metrics for this session. This typically means the training process failed or didn't complete successfully.
+          </p>
+          <div className="flex gap-4">
+              <Link href="/model-history" className="px-4 py-2 rounded-lg border border-zinc-800 text-zinc-300 hover:bg-zinc-900 transition-colors">
+                  Back to History
+              </Link>
+              <Link href="/dataset-upload" className="px-4 py-2 rounded-lg bg-white text-black font-medium hover:bg-zinc-200 transition-colors">
+                  Train New Model
+              </Link>
+          </div>
         </div>
-        <h1 className="text-2xl font-bold text-white mb-2">Model Data Not Found</h1>
-        <p className="text-zinc-400 text-center max-w-md mb-8">
-          We couldn't find performance metrics for this session. This typically means the training process failed or didn't complete successfully.
-        </p>
-        <div className="flex gap-4">
-            <Link href="/model-history" className="px-4 py-2 rounded-lg border border-zinc-800 text-zinc-300 hover:bg-zinc-900 transition-colors">
-                Back to History
-            </Link>
-            <Link href="/dataset-upload" className="px-4 py-2 rounded-lg bg-white text-black font-medium hover:bg-zinc-200 transition-colors">
-                Train New Model
-            </Link>
-        </div>
+        <Footer />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-        <div className="text-red-400">Error: {error}</div>
+      <div className="flex flex-col min-h-screen bg-zinc-950 text-white">
+        <NavBar />
+        <div className="flex-grow flex items-center justify-center">
+          <div className="text-red-400">Error: {error}</div>
+        </div>
+        <Footer />
       </div>
     );
   }
 
   if (!data) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-        <div className="text-zinc-400">No data available</div>
+      <div className="flex flex-col min-h-screen bg-zinc-950 text-white">
+        <NavBar />
+        <div className="flex-grow flex items-center justify-center">
+          <div className="text-zinc-400">No data available</div>
+        </div>
+        <Footer />
       </div>
     );
   }
@@ -270,28 +292,27 @@ export default function ModelDetail() {
   const gainsLiftData = parseGainsLiftTable(data.full_performance_details?.gains_lift_table || '');
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white">
-      {/* Header */}
-      <div className="border-b border-zinc-800 bg-zinc-900/50 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-white mb-2">Top Model Performance Details</h1>
-              <p className="text-zinc-400">Comprehensive performance metrics and model evaluation</p>
-            </div>
-            <div className="flex items-center space-x-4">
-              <div className="text-right">
-                <div className="text-sm text-zinc-400">Model ID</div>
-                <div className="text-white font-mono text-sm">{data.key_metrics?.model_name || 'N/A'}</div>
-              </div>
-              <div className="bg-green-500/20 text-green-400 px-3 py-1 rounded-full text-sm border border-green-500/30">
-                Best in
-              </div>
+    <div className="flex flex-col min-h-screen bg-zinc-950 text-white">
+      <NavBar />
+      
+      <div className="flex-grow max-w-7xl mx-auto px-6 py-8 w-full">
+        {/* Section Title */}
+        <div className="mb-6">
+          <h4 className="text-xl text-gray-400 mb-2">Model Performance</h4>
+          <h2 className="text-xl sm:text-2xl font-medium text-center sm:text-left">
+            Top Model Performance Details
+          </h2>
+        </div>
+
+        {/* Model Info */}
+        <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-6 mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-white">Model Information</h3>
+            <div className="bg-green-500/20 text-green-400 px-3 py-1 rounded-full text-sm border border-green-500/30">
+              Best in
             </div>
           </div>
-          
-          {/* Model Info */}
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <div className="text-sm text-zinc-400">Model ID</div>
               <div className="text-white font-mono text-sm truncate">{data.key_metrics?.model_name || 'N/A'}</div>
@@ -310,9 +331,6 @@ export default function ModelDetail() {
             </div>
           </div>
         </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Key Metrics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <StatCard
@@ -485,6 +503,9 @@ export default function ModelDetail() {
           </div>
         </div>
       </div>
+
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }

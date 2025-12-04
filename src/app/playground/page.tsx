@@ -2,9 +2,11 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Send, Download, Loader2 } from "lucide-react";
 import NavBar from "@/components/navbar/navbar";
+import Footer from "@/components/footer/footer";
 import { Button } from "@/components/ui/button";    
 import { buildApiUrl } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
+import ProgressStepper from "@/components/ProgressStepper";
 
 export default function Playground() {
     type Msg = { id: string; role: "user" | "assistant"; content: string };
@@ -225,12 +227,13 @@ export default function Playground() {
     };
 
     return (
-        <div className="min-h-screen bg-black text-neutral-100">
+        <div className="flex flex-col min-h-screen bg-black text-neutral-100">
             {/* Top nav */}
             <NavBar />
+            <ProgressStepper currentStep={4} />
 
             {/* Main layout */}
-            <main className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-4 py-6 lg:grid-cols-3">
+            <main className="flex-grow mx-auto grid max-w-7xl grid-cols-1 gap-6 px-4 py-6 lg:grid-cols-3">
                 {/* Chat column */}
                 <section className="lg:col-span-2">
                     <div className="rounded-xl border border-neutral-800 bg-neutral-900/40 p-4">
@@ -333,6 +336,9 @@ export default function Playground() {
                     </div>
                 </aside>
             </main>
+
+            {/* Footer */}
+            <Footer />
         </div>
     );
 }

@@ -48,7 +48,7 @@ export default function TrainingDropdownTextarea({ trainingData }: TrainingDropd
   const toggleOpen = () => setIsOpen(!isOpen);
 
   useEffect(() => {
-    if (trainingData && trainingData.trainingLogs) {
+    if (trainingData && trainingData.trainingLogs && trainingData.trainingLogs.length > 0) {
       const text = trainingData.trainingLogs
         .map((log) => {
           const timestamp = new Date(log.timestamp).toLocaleString('en-GB');
@@ -59,7 +59,7 @@ export default function TrainingDropdownTextarea({ trainingData }: TrainingDropd
         .join('\n');
       setTrainingText(text);
     } else {
-      setTrainingText('No training logs available');
+      setTrainingText('Start training to view log');
     }
   }, [trainingData]);
 

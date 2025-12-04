@@ -4,9 +4,10 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import * as XLSX from 'xlsx';
 import { Button } from '@/components/ui/button';
-import { Upload, X, FileSpreadsheet, CheckCircle, ArrowRight, MessageSquare, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Upload, X, CheckCircle, ArrowRight, ArrowLeft, MessageSquare, AlertTriangle } from 'lucide-react';
 import NavBar from "@/components/navbar/navbar";
 import Footer from "@/components/footer/footer";
+import ProgressStepper from "@/components/ProgressStepper";
 
 interface DataRow {
   [key: string]: string | number;
@@ -288,23 +289,17 @@ export default function DatasetUploadPage() {
       {/* Nav Bar */}
       <NavBar />
       
-      <div className="flex-grow">
-        {/* Header */}
-        <div className="border-b border-zinc-800 bg-zinc-950/50 backdrop-blur-sm">
-          <div className="max-w-7xl mx-auto px-6 py-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-cyan-500/10 rounded-lg">
-                <FileSpreadsheet className="w-6 h-6 text-cyan-400" />
-              </div>
-              <div>
-              <h1 className="text-2xl font-bold text-white">Dataset Upload</h1>
-              <p className="text-zinc-400 text-sm">Upload your dataset in Excel or CSV format for analysis</p>
-              </div>
-            </div>
-          </div>
-        </div>
+      <ProgressStepper currentStep={2} />
 
+      <div className="flex-grow">
         <div className="max-w-7xl mx-auto px-6 py-8 text-white">
+          {/* Section Title */}
+          <div className="mb-6">
+            <h4 className="text-xl text-gray-400 mb-2">Dataset Upload</h4>
+            <h2 className="text-xl sm:text-2xl font-medium text-center sm:text-left">
+              Upload your dataset in Excel or CSV format for analysis
+            </h2>
+          </div>
         {/* Model Prompt Context */}
         {prompt && (
           <div className="bg-zinc-950 rounded-xl border border-zinc-800 p-6 mb-6">
@@ -565,11 +560,11 @@ export default function DatasetUploadPage() {
                     <button
                       onClick={validateDataset}
                       disabled={isValidating || !prompt}
-                      className="inline-flex items-center gap-2 bg-cyan-500 hover:bg-cyan-600 disabled:bg-zinc-600 disabled:cursor-not-allowed text-white px-4 py-2 rounded-full text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-cyan-500 cursor-pointer"
+                      className="inline-flex items-center gap-2 bg-white hover:bg-gray-50 disabled:bg-gray-300 disabled:cursor-not-allowed text-gray-900 border border-gray-300 px-4 py-2 rounded-lg text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-500 cursor-pointer"
                     >
                       {isValidating ? (
                         <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
                           Validating...
                         </>
                       ) : (
@@ -584,9 +579,9 @@ export default function DatasetUploadPage() {
                   <>
                     <button
                       onClick={() => setValidationResult(null)}
-                      className="inline-flex items-center gap-2 bg-zinc-600 hover:bg-zinc-700 text-white px-4 py-2 rounded-full text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-zinc-500 cursor-pointer"
+                      className="inline-flex items-center gap-2 bg-black hover:bg-gray-900 border border-gray-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-500 cursor-pointer"
                     >
-                      <RefreshCw className="w-4 h-4" />
+                      <ArrowLeft className="w-4 h-4" />
                       Re-validate
                     </button>
                     
@@ -610,7 +605,7 @@ export default function DatasetUploadPage() {
                     ) : (
                       <button
                         onClick={() => handleContinueToTraining(false)}
-                        className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-full text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-green-500 cursor-pointer"
+                        className="inline-flex items-center gap-2 bg-white hover:bg-gray-50 text-gray-900 border border-gray-300 px-4 py-2 rounded-lg text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-500 cursor-pointer"
                       >
                         <ArrowRight className="w-4 h-4" />
                         Continue to Training
