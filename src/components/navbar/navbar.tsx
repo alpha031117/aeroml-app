@@ -117,12 +117,6 @@ const NavBar = () => {
               </Link>
             ) : (
               <>
-                {/* Notification Bell */}
-                <button className="hidden md:block text-gray-400 hover:text-white transition-colors relative group">
-                  <Bell className="w-5 h-5" />
-                  <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border-2 border-black hidden group-hover:block" />
-                </button>
-
                 {/* Profile Dropdown */}
                 <div className="relative" ref={dropdownRef}>
                   <button
