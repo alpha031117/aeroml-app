@@ -569,7 +569,8 @@ export default function ModelTraining() {
 
     const handleModelReport = () => {
         if (sessionId) {
-            router.push(`/model-report?session_id=${sessionId}`);
+            // Navigate directly to model-detail, same as from model history rows
+            router.push(`/model-detail?session_id=${sessionId}`);
         } else {
             alert('No session ID available. Please complete training first.');
         }
