@@ -1,17 +1,19 @@
 import { PaperPlaneIcon } from "@radix-ui/react-icons";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 
 const Hero = () => {
     const { ref, show } = useScrollReveal();
-    const { data: session } = useSession();
+    const { isAuthenticated } = useAuth();
     const router = useRouter();
 
     const handleRunNowClick = () => {
-        if (session) {
+        if (isAuthenticated) {
             router.push('/model-prompt');
+        } else {
+            router.push('/auth/login');
         }
     };
     return (
@@ -33,10 +35,7 @@ const Hero = () => {
                     readOnly
                     />
                     <button 
-                        className={`whitespace-nowrap px-5 py-3 rounded-md bg-white text-black font-medium flex items-center gap-2 transition-opacity ${
-                            session ? 'hover:bg-gray-100 cursor-pointer' : 'opacity-50 cursor-not-allowed'
-                        }`}
-                        disabled={!session}
+                        className="whitespace-nowrap px-5 py-3 rounded-md bg-white text-black font-medium flex items-center gap-2 hover:bg-gray-100 cursor-pointer transition-all"
                         onClick={handleRunNowClick}
                     >
                         Run Now <PaperPlaneIcon />

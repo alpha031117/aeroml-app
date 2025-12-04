@@ -69,18 +69,20 @@ const NavBar = () => {
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           
           {/* LEFT SECTION: Branding */}
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="relative w-10 h-10 transition-transform group-hover:scale-105">
-              <Image
-                src="/images/aeroml-icon.png"
-                alt="AeroML Logo"
-                width={40}
-                height={40}
-                priority
-              />
-            </div>
-            <span className="text-white font-bold text-xl tracking-wide font-sans">
-              AEROML
+          <Link href="/" className="flex items-center gap-2 group">
+            <span className="flex items-center gap-2">
+              <span className="relative w-8 h-8 transition-transform group-hover:scale-105 flex-shrink-0 flex items-center">
+                <Image
+                  src="/images/aeroml-icon.png"
+                  alt="AeroML Logo"
+                  width={32}
+                  height={32}
+                  priority
+                />
+              </span>
+              <span className="text-white font-bold text-xl tracking-wide font-sans">
+                AEROML
+              </span>
             </span>
           </Link>
 
