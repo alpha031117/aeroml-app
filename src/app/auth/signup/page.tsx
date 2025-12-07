@@ -8,17 +8,19 @@ import Image from 'next/image';
 import { faGoogle } from '@fortawesome/free-brands-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import Loader from '@/components/loader/loader';
+import { Button } from '@/components/ui/button'; // Import Button component
 
 const SignUp = () => {
-  // Added firstName and lastName to state
   const [credentials, setCredentials] = useState({
     firstName: '',
     lastName: '',
-    username: '',
+    username: '', // This will be the email
     password: '',
     confirmPassword: '',
   });
   const [providers, setProviders] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -36,16 +38,47 @@ const SignUp = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
+    setError(null);
 
     if (credentials.password !== credentials.confirmPassword) {
-      alert('Passwords do not match.');
+      setError('Passwords do not match.');
+      setIsLoading(false);
       return;
     }
 
-    // TODO: Implement backend signup logic here using firstName, lastName, username (email), password
+    // Placeholder for actual signup logic
+    // In a real application, you would send this data to your backend API
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate network delay
 
-    alert('Sign-up successful! Redirecting to sign-in page...');
-    router.push('/auth/signin');
+      // Example: Call your signup API
+      // const response = await fetch('/api/auth/signup', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({
+      //     firstName: credentials.firstName,
+      //     lastName: credentials.lastName,
+      //     email: credentials.username,
+      //     password: credentials.password,
+      //   }),
+      // });
+
+      // if (!response.ok) {
+      //   const errorData = await response.json();
+      //   throw new Error(errorData.message || 'Sign up failed');
+      // }
+
+      // alert('Sign-up successful! Redirecting to sign-in page...');
+      router.push('/auth/login');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Sign up failed. Please try again.';
+      setError(errorMessage);
+      console.error('Sign up error:', err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (!providers) {
@@ -54,107 +87,131 @@ const SignUp = () => {
 
   return (
     <div
-      className="flex justify-center items-center min-h-screen"
+      className="flex justify-center items-center min-h-screen p-4"
       style={{ background: 'linear-gradient(180deg, #080609 20%, #2F1926 50%, #080609 90%)' }}
     >
-      <div className="p-8 rounded-lg shadow-xl w-full sm:w-96">
+      <div className="w-full max-w-md bg-zinc-900/50 backdrop-blur-md border border-zinc-800 rounded-xl p-8 shadow-2xl">
         {/* Logo */}
-        <div className="flex justify-center mb-4">
-          <Image src="/images/aeroml-icon.png" alt="AeroML Logo" width={85} height={85} priority />
+        <div className="flex flex-col items-center mb-8">
+          <Image
+            src="/images/aeroml-icon.png"
+            alt="AeroML Logo"
+            width={64}
+            height={64}
+            priority
+            className="mb-4"
+          />
+          <h2 className="text-2xl font-semibold text-white">Create Your Account</h2>
+          <p className="text-zinc-400 text-sm mt-2">Join AeroML and unleash your models</p>
         </div>
-        <h2 className="text-2xl font-semibold text-center text-white mb-6">Create Your Account</h2>
+
+        {/* Error message */}
+        {error && (
+          <div className="mb-6 p-3 bg-red-500/10 border border-red-500/50 rounded-lg">
+            <p className="text-red-200 text-sm text-center">{error}</p>
+          </div>
+        )}
 
         {/* Form */}
-        <form onSubmit={handleSubmit}>
-            <div className="flex gap-4 mb-4">
-                <input
-                type="text"
-                name="firstName"
-                placeholder="First Name*"
-                value={credentials.firstName}
-                onChange={handleChange}
-                className="w-[48%] p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-                />
-                <input
-                type="text"
-                name="lastName"
-                placeholder="Last Name*"
-                value={credentials.lastName}
-                onChange={handleChange}
-                className="w-[48%] p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-                />
-            </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="flex gap-4">
+            <input
+              type="text"
+              name="firstName"
+              placeholder="First Name"
+              value={credentials.firstName}
+              onChange={handleChange}
+              required
+              disabled={isLoading}
+              className="w-1/2 px-4 py-3 bg-transparent border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            />
+            <input
+              type="text"
+              name="lastName"
+              placeholder="Last Name"
+              value={credentials.lastName}
+              onChange={handleChange}
+              required
+              disabled={isLoading}
+              className="w-1/2 px-4 py-3 bg-transparent border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            />
+          </div>
 
-            <div className="mb-4">
-                <input
-                type="email"
-                name="username"
-                placeholder="Email address*"
-                value={credentials.username}
-                onChange={handleChange}
-                className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-                />
-            </div>
+          <div>
+            <input
+              type="email"
+              name="username"
+              placeholder="Email address"
+              value={credentials.username}
+              onChange={handleChange}
+              required
+              disabled={isLoading}
+              className="w-full px-4 py-3 bg-transparent border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            />
+          </div>
 
-            <div className="mb-4">
-                <input
-                type="password"
-                name="password"
-                placeholder="Password*"
-                value={credentials.password}
-                onChange={handleChange}
-                className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-                />
-            </div>
+          <div>
+            <input
+              type="password"
+              name="password"
+              placeholder="Password"
+              value={credentials.password}
+              onChange={handleChange}
+              required
+              disabled={isLoading}
+              className="w-full px-4 py-3 bg-transparent border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            />
+          </div>
 
-            <div className="mb-6">
-                <input
-                type="password"
-                name="confirmPassword"
-                placeholder="Confirm Password*"
-                value={credentials.confirmPassword}
-                onChange={handleChange}
-                className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-                />
-            </div>
+          <div>
+            <input
+              type="password"
+              name="confirmPassword"
+              placeholder="Confirm Password"
+              value={credentials.confirmPassword}
+              onChange={handleChange}
+              required
+              disabled={isLoading}
+              className="w-full px-4 py-3 bg-transparent border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            />
+          </div>
 
-            <button
-                type="submit"
-                className="w-full p-3 bg-white text-black rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4 cursor-pointer"
-            >
-                Sign Up
-            </button>
+          <Button
+            type="submit"
+            disabled={isLoading}
+            variant="primary"
+            className="w-full justify-center py-3 text-base font-medium"
+          >
+            {isLoading ? 'Signing Up...' : 'Sign Up'}
+          </Button>
         </form>
 
-        <div className="flex items-center justify-center mb-4 mt-2">
-          <p className="text-sm text-white">Already have an account?</p>
-          <a href="/auth/signin" className="text-gray-500 ml-2">
+        <div className="flex items-center justify-center mt-6 mb-6">
+          <p className="text-sm text-zinc-400">Already have an account? </p>
+          <a href="/auth/login" className="text-white hover:underline ml-2 font-medium">
             Sign in
           </a>
         </div>
 
-        {/* Providers */}
-        <div className="flex items-center justify-center mb-4">
-          <div className="border-t border-gray-300 flex-grow mr-2"></div>
-          <p className="text-sm text-white">Or Sign Up With:</p>
-          <div className="border-t border-gray-300 flex-grow ml-2"></div>
+        {/* Divider */}
+        <div className="flex items-center gap-4 my-6">
+          <div className="h-px flex-1 bg-zinc-800"></div>
+          <span className="text-xs text-zinc-500 uppercase">Or sign up with</span>
+          <div className="h-px flex-1 bg-zinc-800"></div>
         </div>
 
-        <div className="space-y-2">
+        {/* Providers */}
+        <div className="space-y-3">
           {Object.values(providers).map((provider: any) => (
-            <button
+            <Button
               key={provider.name}
               onClick={() => signIn(provider.id, { callbackUrl: '/model-prompt' })}
-              className="w-full p-3 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 flex items-center justify-center gap-5 cursor-pointer"
+              variant="outline"
+              className="w-full justify-center py-3 text-base font-medium border-zinc-700 hover:bg-zinc-800/50 hover:text-white transition-colors"
             >
-              {provider.name === 'Google' && <FontAwesomeIcon icon={faGoogle} className="text-white text-xl" />}
+              {provider.name === 'Google' && <FontAwesomeIcon icon={faGoogle} className="mr-2 text-lg" />}
               Sign up with {provider.name}
-            </button>
+            </Button>
           ))}
         </div>
       </div>
