@@ -1,25 +1,25 @@
-'use client'; // Ensure this is a client-side component
+'use client';
 
 import { useState, useEffect } from 'react';
 import { getProviders, signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';  // Import useRouter for navigation
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 
 import { faGoogle } from '@fortawesome/free-brands-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import Loader from '@/components/loader/loader'; // Import your Loader component
-import { useUser } from '@/contexts/UserContext'; // Import useUser hook
-import { buildApiUrl } from '@/lib/api'; // Import API utility
+import Loader from '@/components/loader/loader';
+import { useUser } from '@/contexts/UserContext';
+import { buildApiUrl } from '@/lib/api';
+import { Button } from '@/components/ui/button';
 
 const SignIn = () => {
   const [providers, setProviders] = useState<any>(null);
   const [credentials, setCredentials] = useState({ email: '', password: '' });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const router = useRouter();  // Initialize the router
-  const { setUser } = useUser(); // Get setUser function from context
+  const router = useRouter();
+  const { setUser } = useUser();
 
-  // Fetch providers on component mount
   useEffect(() => {
     const fetchProviders = async () => {
       const response = await getProviders();
@@ -40,7 +40,6 @@ const SignIn = () => {
     setError(null);
 
     try {
-      // Call the login API
       const response = await fetch(buildApiUrl('/api/users/login'), {
         method: 'POST',
         headers: {
@@ -59,7 +58,6 @@ const SignIn = () => {
 
       const userData = await response.json();
 
-      // Store user data in global context
       setUser({
         id: userData.id,
         email: userData.email,
@@ -68,7 +66,6 @@ const SignIn = () => {
         created_at: userData.created_at,
       });
 
-      // Redirect to model-prompt page
       router.push('/model-prompt');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Login failed. Please try again.';
@@ -80,93 +77,97 @@ const SignIn = () => {
   };
 
   if (!providers) {
-    return <Loader />; // Handle loading state
+    return <Loader />;
   }
 
   return (
-    <div className="flex justify-center items-center min-h-screen" style={{ background: 'linear-gradient(180deg, #080609 20%, #2F1926 50%, #080609 90%)' }}>
-      <div className="p-8 rounded-lg shadow-xl w-full sm:w-96">
+    <div className="flex justify-center items-center min-h-screen p-4" style={{ background: 'linear-gradient(180deg, #080609 20%, #2F1926 50%, #080609 90%)' }}>
+      <div className="w-full max-w-md bg-zinc-900/50 backdrop-blur-md border border-zinc-800 rounded-xl p-8 shadow-2xl">
         {/* Logo */}
-        <div className="flex justify-center">
+        <div className="flex flex-col items-center mb-8">
           <Image
             src="/images/aeroml-icon.png"
             alt="AeroML Logo"
-            width={85}
-            height={85}
+            width={64}
+            height={64}
             priority
+            className="mb-4"
           />
+          <h2 className="text-2xl font-semibold text-white">Welcome back</h2>
+          <p className="text-zinc-400 text-sm mt-2">Sign in to continue to AeroML</p>
         </div>
-        <h2 className="text-2xl font-semibold text-center text-white mb-6">Sign In Your Account</h2>
+
         {/* Error message */}
         {error && (
-          <div className="mb-4 p-3 bg-red-500/20 border border-red-500 rounded-md">
-            <p className="text-red-200 text-sm">{error}</p>
+          <div className="mb-6 p-3 bg-red-500/10 border border-red-500/50 rounded-lg">
+            <p className="text-red-200 text-sm text-center">{error}</p>
           </div>
         )}
+
         {/* Form */}
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
             <input
               type="email"
               name="email"
-              placeholder="Email address*"
+              placeholder="Email address"
               value={credentials.email}
               onChange={handleChange}
               required
               disabled={isLoading}
-              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-4 py-3 bg-transparent border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
 
-          <div className="mb-6">
+          <div>
             <input
               type="password"
               name="password"
-              placeholder="Password*"
+              placeholder="Password"
               value={credentials.password}
               onChange={handleChange}
               required
               disabled={isLoading}
-              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-4 py-3 bg-transparent border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
 
-          <button
+          <Button
             type="submit"
             disabled={isLoading}
-            className="w-full p-3 bg-white text-black rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            variant="primary"
+            className="w-full justify-center py-3 text-base font-medium cursor-pointer"
           >
             {isLoading ? 'Signing In...' : 'Sign In'}
-          </button>
+          </Button>
         </form>
 
-        <div className="flex items-center justify-center mb-4 mt-2">
-          <p className="text-sm text-white">Don't have an account? </p> 
-          <a href="/auth/signup" className="text-gray-500  ml-2">Sign up</a>
+        <div className="flex items-center justify-center mt-6 mb-6">
+          <p className="text-sm text-zinc-400">Don't have an account? </p> 
+          <a href="/auth/signup" className="text-white hover:underline ml-2 font-medium">Sign up</a>
+        </div>
+
+        {/* Divider */}
+        <div className="flex items-center gap-4 my-6">
+          <div className="h-px flex-1 bg-zinc-800"></div>
+          <span className="text-xs text-zinc-500 uppercase">Or continue with</span>
+          <div className="h-px flex-1 bg-zinc-800"></div>
         </div>
 
         {/* Providers */}
-        <div className="flex items-center justify-center mb-4">
-          <div className="border-t border-gray-300 flex-grow mr-2"></div> {/* Left line */}
-          <p className="text-sm text-white">Or Sign In With:</p>
-          <div className="border-t border-gray-300 flex-grow ml-2"></div> {/* Right line */}
-        </div>
-
-
-        <div className="space-y-2">
+        <div className="space-y-3">
           {Object.values(providers).map((provider: any) => (
-            <button
+            <Button
               key={provider.name}
               onClick={() => signIn(provider.id, { callbackUrl: '/model-prompt' })}
-              className="w-full p-3 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 flex items-center justify-center gap-5 cursor-pointer"
+              variant="outline"
+              className="w-full justify-center py-3 text-base font-medium border-zinc-700 hover:bg-zinc-800/50 hover:text-white transition-colors cursor-pointer"
             >
-              {/* FontAwesome Google Icon */}
               {provider.name === "Google" && (
-                <FontAwesomeIcon icon={faGoogle} className="text-white text-xl" />
+                <FontAwesomeIcon icon={faGoogle} className="mr-2 text-lg" />
               )}
-              {/* Text */}
-              Sign in with {provider.name}
-            </button>
+              Continue with {provider.name}
+            </Button>
           ))}
         </div>
       </div>
