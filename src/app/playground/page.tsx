@@ -30,8 +30,24 @@ export default function Playground() {
     }, []);
     const [input, setInput] = useState("");
     const [isThinking, setIsThinking] = useState(false);
+    const [loadingText, setLoadingText] = useState("Processing your request…");
     const [modelInfo, setModelInfo] = useState<{type?: string}>({});
     const listRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        let interval: NodeJS.Timeout;
+        if (isThinking) {
+            let seconds = 0;
+            setLoadingText("Processing your request…");
+            interval = setInterval(() => {
+                seconds++;
+                if (seconds >= 2) {
+                    setLoadingText("Analyzing and generating response…");
+                }
+            }, 1000);
+        }
+        return () => clearInterval(interval);
+    }, [isThinking]);
 
     useEffect(() => {
         // Auto-scroll to bottom on new messages
@@ -163,7 +179,7 @@ export default function Playground() {
             
             if (error instanceof Error) {
                 if (error.name === 'AbortError') {
-                    errorMessage = "Request timed out. The H2O session initialization is taking longer than expected. Please try again.";
+                    errorMessage = "Request timed out. The request is taking longer than expected. Please try again.";
                 } else if (error.message.includes('Failed to fetch')) {
                     errorMessage = "Unable to connect to the server. Please check your connection and try again.";
                 }
@@ -250,7 +266,7 @@ export default function Playground() {
                             {isThinking && (
                                 <div className="mt-3 inline-flex items-center gap-2 rounded-md bg-neutral-800/60 px-3 py-1 text-sm text-neutral-300">
                                     <Loader2 className="h-4 w-4 animate-spin" />
-                                    Initializing H2O session and processing your request…
+                                    {loadingText}
                                 </div>
                             )}
                         </div>
