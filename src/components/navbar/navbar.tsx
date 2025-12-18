@@ -6,13 +6,12 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { 
-  Bell, 
   Menu, 
   X, 
     LogOut,
     History,
     LayoutDashboard,
-    BookOpen,  ChevronDown
+    BookOpen,  ChevronDown, User, Cog
 } from "lucide-react";
 import { useUser } from "@/contexts/UserContext";
 import { useAuth } from "@/hooks/useAuth";
@@ -139,9 +138,28 @@ const NavBar = () => {
                       </div>
                       
                       <div className="p-1 border-t border-zinc-800">
-                        <button
+                                                        {/* My Profile Link */}
+                                                        <Link href="/my-profile" passHref legacyBehavior>
+                                                          <button
+                                                            onClick={() => setIsDropdownOpen(false)} // Close dropdown on click
+                                                            className="w-full flex items-center gap-3 px-3 py-2 text-sm text-white hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
+                                                          >
+                                                            <User className="w-4 h-4" />
+                                                            My Profile
+                                                          </button>
+                                                        </Link>
+                                                        {/* LLM Configuration Link */}
+                                                        <Link href="/llm-configuration" passHref legacyBehavior>
+                                                          <button
+                                                            onClick={() => setIsDropdownOpen(false)} // Close dropdown on click
+                                                            className="w-full flex items-center gap-3 px-3 py-2 text-sm text-white hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
+                                                          >
+                                                            <Cog className="w-4 h-4" /> {/* Cog icon for settings */}
+                                                            LLM Configuration
+                                                          </button>
+                                                        </Link>                        <button
                           onClick={handleSignOut}
-                          className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors"
+                          className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
                         >
                           <LogOut className="w-4 h-4" />
                           Sign Out

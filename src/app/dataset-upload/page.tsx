@@ -8,6 +8,7 @@ import { Upload, X, CheckCircle, ArrowRight, ArrowLeft, MessageSquare, AlertTria
 import NavBar from "@/components/navbar/navbar";
 import Footer from "@/components/footer/footer";
 import ProgressStepper from "@/components/ProgressStepper";
+import { useAuth } from '@/hooks/useAuth';
 
 interface DataRow {
   [key: string]: string | number;
@@ -18,6 +19,13 @@ interface FileInfo {
   size: string;
   rows: number;
   columns: number;
+}
+
+interface LeakyColumn {
+  column_name: string;
+  reason: string;
+  severity: 'high' | 'medium' | 'low';
+  recommendation: string;
 }
 
 interface ValidationResult {
@@ -37,12 +45,16 @@ interface ValidationResult {
     potential_issues: string[];
     suggested_target_column: string;
     suggested_preprocessing: string[];
+    leaky_columns?: LeakyColumn[];
+    columns_to_exclude?: string[];
+    safe_columns?: string[];
   };
 }
 
 export default function DatasetUploadPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { userId } = useAuth();
   const [prompt, setPrompt] = useState<string>('');
   const [isDragOver, setIsDragOver] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<FileInfo | null>(null);
@@ -53,6 +65,7 @@ export default function DatasetUploadPage() {
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [isValidating, setIsValidating] = useState(false);
   const [rawFileData, setRawFileData] = useState<File | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   // Get prompt from URL parameters
   useEffect(() => {
@@ -63,6 +76,13 @@ export default function DatasetUploadPage() {
       }
     }
   }, [searchParams]);
+
+  // Scroll to top when validation error occurs
+  useEffect(() => {
+    if (validationError) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [validationError]);
 
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes';
@@ -201,13 +221,22 @@ export default function DatasetUploadPage() {
 
   const validateDataset = useCallback(async () => {
     if (!rawFileData || !prompt) {
-      alert('Please ensure both a dataset and prompt are provided.');
+      setValidationError('Please ensure both a dataset and prompt are provided.');
+      return;
+    }
+
+    if (!userId) {
+      setValidationError('User authentication required. Please log in.');
       return;
     }
 
     setIsValidating(true);
+    setValidationError(null);
+    setValidationResult(null);
+    
     try {
       const formData = new FormData();
+      formData.append('user_id', userId);
       formData.append('file', rawFileData);
       formData.append('prompt', prompt);
 
@@ -217,18 +246,30 @@ export default function DatasetUploadPage() {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        // Try to parse error message from response
+        let errorMessage = `Validation failed (HTTP ${response.status})`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.detail || errorData.error || errorMessage;
+        } catch {
+          // If response is not JSON, use status text
+          errorMessage = response.statusText || errorMessage;
+        }
+        throw new Error(errorMessage);
       }
 
       const result: ValidationResult = await response.json();
       setValidationResult(result);
+      setValidationError(null); // Clear any previous errors
     } catch (error) {
       console.error('Error validating dataset:', error);
-      alert('Error validating dataset. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Error validating dataset. Please try again.';
+      setValidationError(errorMessage);
+      setValidationResult(null); // Clear validation result on error
     } finally {
       setIsValidating(false);
     }
-  }, [rawFileData, prompt]);
+  }, [rawFileData, prompt, userId]);
 
   const handleContinueToTraining = useCallback((forceProceed: boolean = false) => {
     if (!validationResult || !uploadedFile || !prompt) return;
@@ -282,6 +323,7 @@ export default function DatasetUploadPage() {
     setShowSuccess(false);
     setValidationResult(null);
     setRawFileData(null);
+    setValidationError(null);
   }, []);
 
   return (
@@ -376,6 +418,24 @@ export default function DatasetUploadPage() {
                   variant="ghost"
                   onClick={() => setShowSuccess(false)}
                   className="text-green-400 hover:text-green-300"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
+
+            {/* Validation Error Message */}
+            {validationError && (
+              <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-red-400 font-medium mb-1">Validation Error</p>
+                  <p className="text-red-300/80 text-sm">{validationError}</p>
+                </div>
+                <Button
+                  variant="ghost"
+                  onClick={() => setValidationError(null)}
+                  className="text-red-400 hover:text-red-300 flex-shrink-0"
                 >
                   <X className="w-4 h-4" />
                 </Button>
@@ -550,6 +610,66 @@ export default function DatasetUploadPage() {
                       </ul>
                     </div>
                   )}
+
+                  {/* Excluded Columns (Leaky Columns) */}
+                  {validationResult.validation.leaky_columns && validationResult.validation.leaky_columns.length > 0 && (
+                    <div className="bg-zinc-900 rounded-lg p-4">
+                      <h4 className="text-white font-medium mb-2">Excluded Columns (Data Leakage Detected)</h4>
+                      <div className="space-y-3">
+                        {validationResult.validation.leaky_columns.map((leakyColumn, index) => (
+                          <div key={index} className="bg-zinc-950 rounded-lg p-3 border border-red-500/20">
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-red-400 font-medium">{leakyColumn.column_name}</span>
+                                <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                  leakyColumn.severity === 'high' ? 'bg-red-500/20 text-red-400' :
+                                  leakyColumn.severity === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
+                                  'bg-orange-500/20 text-orange-400'
+                                }`}>
+                                  {leakyColumn.severity.toUpperCase()}
+                                </span>
+                              </div>
+                            </div>
+                            <p className="text-zinc-300 text-sm mb-2">{leakyColumn.reason}</p>
+                            <div className="flex items-start gap-2 mt-2">
+                              <span className="text-cyan-400 text-xs font-medium">Recommendation:</span>
+                              <span className="text-zinc-400 text-xs">{leakyColumn.recommendation}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Columns to Exclude (Simple List) */}
+                  {validationResult.validation.columns_to_exclude && validationResult.validation.columns_to_exclude.length > 0 && (
+                    <div className="bg-zinc-900 rounded-lg p-4">
+                      <h4 className="text-white font-medium mb-2">Columns to Exclude</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {validationResult.validation.columns_to_exclude.map((column, index) => (
+                          <span key={index} className="inline-flex items-center gap-1 bg-red-500/10 text-red-400 px-3 py-1 rounded-full text-sm border border-red-500/20">
+                            <X className="w-3 h-3" />
+                            {column}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Safe Columns */}
+                  {validationResult.validation.safe_columns && validationResult.validation.safe_columns.length > 0 && (
+                    <div className="bg-zinc-900 rounded-lg p-4">
+                      <h4 className="text-white font-medium mb-2">Safe Columns</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {validationResult.validation.safe_columns.map((column, index) => (
+                          <span key={index} className="inline-flex items-center gap-1 bg-green-500/10 text-green-400 px-3 py-1 rounded-full text-sm border border-green-500/20">
+                            <CheckCircle className="w-3 h-3" />
+                            {column}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -578,7 +698,10 @@ export default function DatasetUploadPage() {
                 ) : (
                   <>
                     <button
-                      onClick={() => setValidationResult(null)}
+                      onClick={() => {
+                        setValidationResult(null);
+                        setValidationError(null);
+                      }}
                       className="inline-flex items-center gap-2 bg-black hover:bg-gray-900 border border-gray-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-500 cursor-pointer"
                     >
                       <ArrowLeft className="w-4 h-4" />

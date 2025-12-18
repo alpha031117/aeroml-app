@@ -26,6 +26,13 @@ interface TrainingLog {
 }
 
 // Define the minimal dataset data interface from previous page
+interface LeakyColumn {
+  column_name: string;
+  reason: string;
+  severity: 'high' | 'medium' | 'low';
+  recommendation: string;
+}
+
 interface MinimalDatasetData {
   prompt: string;
   fileInfo: {
@@ -51,6 +58,9 @@ interface MinimalDatasetData {
       potential_issues: string[];
       suggested_target_column: string;
       suggested_preprocessing: string[];
+      leaky_columns?: LeakyColumn[];
+      columns_to_exclude?: string[];
+      safe_columns?: string[];
     };
   };
   targetColumn: string;
@@ -386,11 +396,34 @@ export default function ModelTraining() {
         setTrainingLogs([]);
 
         try {
+            // Collect excluded columns from both leaky_columns and columns_to_exclude
+            const excludedColumns: string[] = [];
+            
+            // Add columns from leaky_columns (if any)
+            if (datasetData.validation.validation.leaky_columns) {
+                excludedColumns.push(...datasetData.validation.validation.leaky_columns.map(col => col.column_name));
+            }
+            
+            // Add columns from columns_to_exclude (if any)
+            if (datasetData.validation.validation.columns_to_exclude) {
+                excludedColumns.push(...datasetData.validation.validation.columns_to_exclude);
+            }
+            
+            // Remove duplicates
+            const uniqueExcludedColumns = Array.from(new Set(excludedColumns));
+
             // Use the original raw file directly
             const formData = new FormData();
             formData.append('file', rawFile, datasetData.fileInfo.name);
             formData.append('target_variable', datasetData.targetColumn || '');
             formData.append('user_id', userId);
+            
+            // Add excluded columns as comma-separated string if there are any
+            if (uniqueExcludedColumns.length > 0) {
+                const excludeColumnsString = uniqueExcludedColumns.join(',');
+                formData.append('exclude_columns', excludeColumnsString);
+                console.log('Excluded columns:', uniqueExcludedColumns);
+            }
 
             console.log('Starting training with target variable:', datasetData.targetColumn);
 
