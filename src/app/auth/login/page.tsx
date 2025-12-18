@@ -9,7 +9,7 @@ import { faGoogle } from '@fortawesome/free-brands-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import Loader from '@/components/loader/loader';
 import { useUser } from '@/contexts/UserContext';
-import { buildApiUrl } from '@/lib/api';
+import { buildApiUrl, getApiBaseUrl } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 
 const SignIn = () => {
@@ -40,7 +40,10 @@ const SignIn = () => {
     setError(null);
 
     try {
-      const response = await fetch(buildApiUrl('/api/users/login'), {
+      const apiUrl = buildApiUrl('/api/v1/users/login');
+      console.log('Attempting login to:', apiUrl);
+      
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -51,9 +54,24 @@ const SignIn = () => {
         }),
       });
 
+      console.log('Login response status:', response.status, response.statusText);
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Login failed' }));
-        throw new Error(errorData.message || 'Login failed. Please check your credentials.');
+        // Handle 404 specifically
+        if (response.status === 404) {
+          const baseUrl = getApiBaseUrl();
+          const errorMessage = `Login endpoint not found (404).\n\nPossible issues:\n• Backend server not running at ${baseUrl}\n• Endpoint /api/users/login doesn't exist\n• Check NEXT_PUBLIC_API_BASE_URL in .env.local\n\nCheck browser console for more details.`;
+          throw new Error(errorMessage);
+        }
+        
+        // Try to parse error response
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch {
+          errorData = { message: `HTTP ${response.status}: ${response.statusText}` };
+        }
+        throw new Error(errorData.message || `Login failed (${response.status}). Please check your credentials.`);
       }
 
       const userData = await response.json();
@@ -68,9 +86,19 @@ const SignIn = () => {
 
       router.push('/model-prompt');
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Login failed. Please try again.';
+      let errorMessage = 'Login failed. Please try again.';
+      
+      if (err instanceof TypeError && err.message.includes('fetch')) {
+        // Network error - server not reachable
+        const baseUrl = getApiBaseUrl();
+        errorMessage = `Cannot connect to backend server at ${baseUrl}.\n\nPlease ensure:\n• Backend server is running\n• Server is accessible at ${baseUrl}\n• Check your NEXT_PUBLIC_API_BASE_URL setting`;
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      
       setError(errorMessage);
       console.error('Login error:', err);
+      console.error('API URL attempted:', buildApiUrl('/api/v1/users/login'));
     } finally {
       setIsLoading(false);
     }
@@ -100,7 +128,7 @@ const SignIn = () => {
         {/* Error message */}
         {error && (
           <div className="mb-6 p-3 bg-red-500/10 border border-red-500/50 rounded-lg">
-            <p className="text-red-200 text-sm text-center">{error}</p>
+            <p className="text-red-200 text-sm text-center whitespace-pre-line">{error}</p>
           </div>
         )}
 

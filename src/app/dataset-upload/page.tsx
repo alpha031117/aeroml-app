@@ -8,6 +8,7 @@ import { Upload, X, CheckCircle, ArrowRight, ArrowLeft, MessageSquare, AlertTria
 import NavBar from "@/components/navbar/navbar";
 import Footer from "@/components/footer/footer";
 import ProgressStepper from "@/components/ProgressStepper";
+import { useAuth } from '@/hooks/useAuth';
 
 interface DataRow {
   [key: string]: string | number;
@@ -43,6 +44,7 @@ interface ValidationResult {
 export default function DatasetUploadPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { userId } = useAuth();
   const [prompt, setPrompt] = useState<string>('');
   const [isDragOver, setIsDragOver] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<FileInfo | null>(null);
@@ -53,6 +55,7 @@ export default function DatasetUploadPage() {
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [isValidating, setIsValidating] = useState(false);
   const [rawFileData, setRawFileData] = useState<File | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   // Get prompt from URL parameters
   useEffect(() => {
@@ -63,6 +66,13 @@ export default function DatasetUploadPage() {
       }
     }
   }, [searchParams]);
+
+  // Scroll to top when validation error occurs
+  useEffect(() => {
+    if (validationError) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [validationError]);
 
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes';
@@ -201,13 +211,22 @@ export default function DatasetUploadPage() {
 
   const validateDataset = useCallback(async () => {
     if (!rawFileData || !prompt) {
-      alert('Please ensure both a dataset and prompt are provided.');
+      setValidationError('Please ensure both a dataset and prompt are provided.');
+      return;
+    }
+
+    if (!userId) {
+      setValidationError('User authentication required. Please log in.');
       return;
     }
 
     setIsValidating(true);
+    setValidationError(null);
+    setValidationResult(null);
+    
     try {
       const formData = new FormData();
+      formData.append('user_id', userId);
       formData.append('file', rawFileData);
       formData.append('prompt', prompt);
 
@@ -217,18 +236,30 @@ export default function DatasetUploadPage() {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        // Try to parse error message from response
+        let errorMessage = `Validation failed (HTTP ${response.status})`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.detail || errorData.error || errorMessage;
+        } catch {
+          // If response is not JSON, use status text
+          errorMessage = response.statusText || errorMessage;
+        }
+        throw new Error(errorMessage);
       }
 
       const result: ValidationResult = await response.json();
       setValidationResult(result);
+      setValidationError(null); // Clear any previous errors
     } catch (error) {
       console.error('Error validating dataset:', error);
-      alert('Error validating dataset. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Error validating dataset. Please try again.';
+      setValidationError(errorMessage);
+      setValidationResult(null); // Clear validation result on error
     } finally {
       setIsValidating(false);
     }
-  }, [rawFileData, prompt]);
+  }, [rawFileData, prompt, userId]);
 
   const handleContinueToTraining = useCallback((forceProceed: boolean = false) => {
     if (!validationResult || !uploadedFile || !prompt) return;
@@ -282,6 +313,7 @@ export default function DatasetUploadPage() {
     setShowSuccess(false);
     setValidationResult(null);
     setRawFileData(null);
+    setValidationError(null);
   }, []);
 
   return (
@@ -376,6 +408,24 @@ export default function DatasetUploadPage() {
                   variant="ghost"
                   onClick={() => setShowSuccess(false)}
                   className="text-green-400 hover:text-green-300"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
+
+            {/* Validation Error Message */}
+            {validationError && (
+              <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-red-400 font-medium mb-1">Validation Error</p>
+                  <p className="text-red-300/80 text-sm">{validationError}</p>
+                </div>
+                <Button
+                  variant="ghost"
+                  onClick={() => setValidationError(null)}
+                  className="text-red-400 hover:text-red-300 flex-shrink-0"
                 >
                   <X className="w-4 h-4" />
                 </Button>
@@ -578,7 +628,10 @@ export default function DatasetUploadPage() {
                 ) : (
                   <>
                     <button
-                      onClick={() => setValidationResult(null)}
+                      onClick={() => {
+                        setValidationResult(null);
+                        setValidationError(null);
+                      }}
                       className="inline-flex items-center gap-2 bg-black hover:bg-gray-900 border border-gray-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-500 cursor-pointer"
                     >
                       <ArrowLeft className="w-4 h-4" />
