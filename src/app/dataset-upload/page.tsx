@@ -21,6 +21,13 @@ interface FileInfo {
   columns: number;
 }
 
+interface LeakyColumn {
+  column_name: string;
+  reason: string;
+  severity: 'high' | 'medium' | 'low';
+  recommendation: string;
+}
+
 interface ValidationResult {
   status: string;
   dataset_info: {
@@ -38,6 +45,9 @@ interface ValidationResult {
     potential_issues: string[];
     suggested_target_column: string;
     suggested_preprocessing: string[];
+    leaky_columns?: LeakyColumn[];
+    columns_to_exclude?: string[];
+    safe_columns?: string[];
   };
 }
 
@@ -598,6 +608,66 @@ export default function DatasetUploadPage() {
                           </li>
                         ))}
                       </ul>
+                    </div>
+                  )}
+
+                  {/* Excluded Columns (Leaky Columns) */}
+                  {validationResult.validation.leaky_columns && validationResult.validation.leaky_columns.length > 0 && (
+                    <div className="bg-zinc-900 rounded-lg p-4">
+                      <h4 className="text-white font-medium mb-2">Excluded Columns (Data Leakage Detected)</h4>
+                      <div className="space-y-3">
+                        {validationResult.validation.leaky_columns.map((leakyColumn, index) => (
+                          <div key={index} className="bg-zinc-950 rounded-lg p-3 border border-red-500/20">
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-red-400 font-medium">{leakyColumn.column_name}</span>
+                                <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                  leakyColumn.severity === 'high' ? 'bg-red-500/20 text-red-400' :
+                                  leakyColumn.severity === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
+                                  'bg-orange-500/20 text-orange-400'
+                                }`}>
+                                  {leakyColumn.severity.toUpperCase()}
+                                </span>
+                              </div>
+                            </div>
+                            <p className="text-zinc-300 text-sm mb-2">{leakyColumn.reason}</p>
+                            <div className="flex items-start gap-2 mt-2">
+                              <span className="text-cyan-400 text-xs font-medium">Recommendation:</span>
+                              <span className="text-zinc-400 text-xs">{leakyColumn.recommendation}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Columns to Exclude (Simple List) */}
+                  {validationResult.validation.columns_to_exclude && validationResult.validation.columns_to_exclude.length > 0 && (
+                    <div className="bg-zinc-900 rounded-lg p-4">
+                      <h4 className="text-white font-medium mb-2">Columns to Exclude</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {validationResult.validation.columns_to_exclude.map((column, index) => (
+                          <span key={index} className="inline-flex items-center gap-1 bg-red-500/10 text-red-400 px-3 py-1 rounded-full text-sm border border-red-500/20">
+                            <X className="w-3 h-3" />
+                            {column}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Safe Columns */}
+                  {validationResult.validation.safe_columns && validationResult.validation.safe_columns.length > 0 && (
+                    <div className="bg-zinc-900 rounded-lg p-4">
+                      <h4 className="text-white font-medium mb-2">Safe Columns</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {validationResult.validation.safe_columns.map((column, index) => (
+                          <span key={index} className="inline-flex items-center gap-1 bg-green-500/10 text-green-400 px-3 py-1 rounded-full text-sm border border-green-500/20">
+                            <CheckCircle className="w-3 h-3" />
+                            {column}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
