@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Menu,
   X,
@@ -17,14 +17,19 @@ import {
 } from "lucide-react";
 import { useUser } from "@/contexts/UserContext";
 import { useAuth } from "@/hooks/useAuth";
+import { buildApiUrl } from "@/lib/api";
 
 const NavBar = () => {
   const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { setUser, clearUser } = useUser();
   const { isAuthenticated, displayName, firstLetter, isLoading } = useAuth();
   
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showLogoutBanner, setShowLogoutBanner] = useState(false);
+  const [showSignupBanner, setShowSignupBanner] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Navigation Links Configuration
@@ -34,12 +39,65 @@ const NavBar = () => {
     { name: 'Documentation', href: '/documentation', icon: BookOpen },
   ];
 
-  const handleSignOut = () => {
-    // For custom FastAPI auth with HttpOnly JWT cookies, the backend should expose
-    // a logout endpoint that clears the cookie. Until that is wired up, we clear
-    // the local user state so the UI reflects a signed-out state.
-    clearUser();
+  const handleSignOut = async () => {
+    try {
+      // Call the FastAPI logout endpoint to clear the HttpOnly JWT cookie
+      const logoutUrl = buildApiUrl("/api/v1/users/logout");
+      const response = await fetch(logoutUrl, {
+        method: "POST",
+        credentials: "include", // send HttpOnly JWT cookie to FastAPI
+      });
+      
+      if (response.ok) {
+        // Show logout banner and redirect to home
+        clearUser();
+        router.push('/?loggedOut=true');
+      } else {
+        // Still clear local state even if API call fails
+        clearUser();
+      }
+    } catch (error) {
+      console.error("Error during logout:", error);
+      // Continue with clearing local state even if API call fails
+      clearUser();
+    }
   };
+
+  // Check for logout query parameter and show banner
+  useEffect(() => {
+    if (searchParams?.get('loggedOut') === 'true') {
+      setShowLogoutBanner(true);
+      // Remove query parameter from URL without reload
+      const url = new URL(window.location.href);
+      url.searchParams.delete('loggedOut');
+      window.history.replaceState({}, '', url.pathname + url.search);
+      
+      // Auto-dismiss banner after 5 seconds
+      const timer = setTimeout(() => {
+        setShowLogoutBanner(false);
+      }, 5000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [searchParams]);
+
+  // Check for signup success query parameter and show banner
+  useEffect(() => {
+    if (searchParams?.get('signupSuccess') === 'true') {
+      setShowSignupBanner(true);
+      // Remove query parameter from URL without reload
+      const url = new URL(window.location.href);
+      url.searchParams.delete('signupSuccess');
+      window.history.replaceState({}, '', url.pathname + url.search);
+      
+      // Auto-dismiss banner after 5 seconds
+      const timer = setTimeout(() => {
+        setShowSignupBanner(false);
+      }, 5000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [searchParams]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -116,7 +174,7 @@ const NavBar = () => {
               <div className="w-10 h-10 rounded-full bg-zinc-800 animate-pulse" />
             ) : !isAuthenticated ? (
               <Link href="/auth/login">
-                <button className="bg-white text-black px-5 py-2 rounded-full font-medium text-sm hover:bg-gray-200 transition-all shadow-lg hover:shadow-white/10">
+                <button className="bg-white text-black px-5 py-2 rounded-full font-medium text-sm hover:bg-gray-200 transition-all shadow-lg hover:shadow-white/10 cursor-pointer">
                   Get Started
                 </button>
               </Link>
@@ -185,6 +243,45 @@ const NavBar = () => {
           </div>
         </div>
       </nav>
+
+      {/* Success Banners - Below Navbar */}
+      {showLogoutBanner && (
+        <div className="sticky top-[65px] left-0 right-0 z-[45] bg-green-500/10 border-b border-green-500/20 backdrop-blur-md w-full">
+          <div className="w-full px-6 py-3">
+            <div className="flex items-center justify-between gap-4">
+              <p className="text-green-400 font-medium text-sm">
+                You have successfully logged out of your account.
+              </p>
+              <button
+                onClick={() => setShowLogoutBanner(false)}
+                className="text-green-400 hover:text-green-300 transition-colors flex-shrink-0"
+                aria-label="Dismiss"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSignupBanner && (
+        <div className={`sticky ${showLogoutBanner ? 'top-[118px]' : 'top-[65px]'} left-0 right-0 z-[45] bg-green-500/10 border-b border-green-500/20 backdrop-blur-md w-full`}>
+          <div className="w-full px-6 py-3">
+            <div className="flex items-center justify-between gap-4">
+              <p className="text-green-400 font-medium text-sm">
+                Account created successfully. You may login with your account now.
+              </p>
+              <button
+                onClick={() => setShowSignupBanner(false)}
+                className="text-green-400 hover:text-green-300 transition-colors flex-shrink-0"
+                aria-label="Dismiss"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && isAuthenticated && (
