@@ -4,21 +4,23 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
-import { 
-  Menu, 
-  X, 
-    LogOut,
-    History,
-    LayoutDashboard,
-    BookOpen,  ChevronDown, User, Cog
+import {
+  Menu,
+  X,
+  LogOut,
+  History,
+  LayoutDashboard,
+  BookOpen,
+  ChevronDown,
+  User,
+  Cog,
 } from "lucide-react";
 import { useUser } from "@/contexts/UserContext";
 import { useAuth } from "@/hooks/useAuth";
 
 const NavBar = () => {
   const pathname = usePathname();
-  const { clearUser } = useUser();
+  const { setUser, clearUser } = useUser();
   const { isAuthenticated, displayName, firstLetter, isLoading } = useAuth();
   
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -33,8 +35,10 @@ const NavBar = () => {
   ];
 
   const handleSignOut = () => {
+    // For custom FastAPI auth with HttpOnly JWT cookies, the backend should expose
+    // a logout endpoint that clears the cookie. Until that is wired up, we clear
+    // the local user state so the UI reflects a signed-out state.
     clearUser();
-    signOut({ callbackUrl: '/' });
   };
 
   // Close dropdown when clicking outside
