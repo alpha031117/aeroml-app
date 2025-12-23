@@ -192,11 +192,14 @@ export default function ModelEnhancement() {
   const renderDescription = (description: string) => {
     if (!description) return null;
 
-    // Remove first leading "-" (and any following spaces)
-    let cleaned = description.replace(/^-+\s*/, '');
+    let cleaned = description;
 
-    // For subsequent "- " within the same string, break into new lines
+    // For " - " within the same string, break into new lines (separate points)
     cleaned = cleaned.replace(/\s+-\s+/g, '\n');
+
+    // Remove leading ":" or "-" (and any following spaces) from the start of each line
+    // So lines like "- Ensure that ..." or ": - Ensure that ..." become "Ensure that ..."
+    cleaned = cleaned.replace(/^[:\-]+\s*/gm, '');
 
     const lines = cleaned.split('\n').filter(line => line.trim().length > 0);
 

@@ -1,33 +1,21 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { getProviders, signIn } from 'next-auth/react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 
 import { faGoogle } from '@fortawesome/free-brands-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import Loader from '@/components/loader/loader';
 import { useUser } from '@/contexts/UserContext';
 import { buildApiUrl, getApiBaseUrl } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 
 const SignIn = () => {
-  const [providers, setProviders] = useState<any>(null);
   const [credentials, setCredentials] = useState({ email: '', password: '' });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const { setUser } = useUser();
-
-  useEffect(() => {
-    const fetchProviders = async () => {
-      const response = await getProviders();
-      setProviders(response);
-    };
-
-    fetchProviders();
-  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -71,7 +59,7 @@ const SignIn = () => {
         } catch {
           errorData = { message: `HTTP ${response.status}: ${response.statusText}` };
         }
-        throw new Error(errorData.message || `Login failed (${response.status}). Please check your credentials.`);
+        throw new Error(errorData.message || `Login failed. Invalid credentials.`);
       }
 
       const userData = await response.json();
@@ -104,9 +92,12 @@ const SignIn = () => {
     }
   };
 
-  if (!providers) {
-    return <Loader />;
-  }
+  const handleGoogleSignIn = () => {
+    // Redirect directly to the FastAPI Google login endpoint.
+    // Backend will handle state, code exchange, user upsert, and JWT cookie.
+    const loginUrl = buildApiUrl('/api/v1/auth/google/login');
+    window.location.href = loginUrl;
+  };
 
   return (
     <div className="flex justify-center items-center min-h-screen p-4" style={{ background: 'linear-gradient(180deg, #080609 20%, #2F1926 50%, #080609 90%)' }}>
@@ -182,21 +173,17 @@ const SignIn = () => {
           <div className="h-px flex-1 bg-zinc-800"></div>
         </div>
 
-        {/* Providers */}
+        {/* Custom Google OAuth via FastAPI */}
         <div className="space-y-3">
-          {Object.values(providers).map((provider: any) => (
-            <Button
-              key={provider.name}
-              onClick={() => signIn(provider.id, { callbackUrl: '/model-prompt' })}
-              variant="outline"
-              className="w-full justify-center py-3 text-base font-medium border-zinc-700 hover:bg-zinc-800/50 hover:text-white transition-colors cursor-pointer"
-            >
-              {provider.name === "Google" && (
-                <FontAwesomeIcon icon={faGoogle} className="mr-2 text-lg" />
-              )}
-              Continue with {provider.name}
-            </Button>
-          ))}
+          <Button
+            type="button"
+            onClick={handleGoogleSignIn}
+            variant="outline"
+            className="w-full justify-center py-3 text-base font-medium border-zinc-700 hover:bg-zinc-800/50 hover:text-white transition-colors cursor-pointer"
+          >
+            <FontAwesomeIcon icon={faGoogle} className="mr-2 text-lg" />
+            Continue with Google
+          </Button>
         </div>
       </div>
     </div>

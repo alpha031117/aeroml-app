@@ -8,7 +8,8 @@ import Image from 'next/image';
 import { faGoogle } from '@fortawesome/free-brands-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import Loader from '@/components/loader/loader';
-import { Button } from '@/components/ui/button'; // Import Button component
+import { Button } from '@/components/ui/button';
+import { buildApiUrl } from '@/lib/api';
 
 const SignUp = () => {
   const [credentials, setCredentials] = useState({
@@ -47,31 +48,25 @@ const SignUp = () => {
       return;
     }
 
-    // Placeholder for actual signup logic
-    // In a real application, you would send this data to your backend API
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate network delay
+      const apiUrl = buildApiUrl('/api/v1/users/');
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: credentials.username,
+          password: credentials.password,
+          full_name: `${credentials.firstName} ${credentials.lastName}`.trim(),
+        }),
+      });
 
-      // Example: Call your signup API
-      // const response = await fetch('/api/auth/signup', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({
-      //     firstName: credentials.firstName,
-      //     lastName: credentials.lastName,
-      //     email: credentials.username,
-      //     password: credentials.password,
-      //   }),
-      // });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || errorData.detail || 'Sign up failed');
+      }
 
-      // if (!response.ok) {
-      //   const errorData = await response.json();
-      //   throw new Error(errorData.message || 'Sign up failed');
-      // }
-
-      // alert('Sign-up successful! Redirecting to sign-in page...');
-      router.push('/auth/login');
+      // Redirect to login page with success query parameter
+      router.push('/auth/login?signupSuccess=true');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Sign up failed. Please try again.';
       setError(errorMessage);
@@ -180,7 +175,7 @@ const SignUp = () => {
             type="submit"
             disabled={isLoading}
             variant="primary"
-            className="w-full justify-center py-3 text-base font-medium"
+            className="w-full justify-center py-3 text-base font-medium cursor-pointer"
           >
             {isLoading ? 'Signing Up...' : 'Sign Up'}
           </Button>
@@ -207,7 +202,7 @@ const SignUp = () => {
               key={provider.name}
               onClick={() => signIn(provider.id, { callbackUrl: '/model-prompt' })}
               variant="outline"
-              className="w-full justify-center py-3 text-base font-medium border-zinc-700 hover:bg-zinc-800/50 hover:text-white transition-colors"
+              className="w-full justify-center py-3 text-base font-medium border-zinc-700 hover:bg-zinc-800/50 hover:text-white transition-colors cursor-pointer"
             >
               {provider.name === 'Google' && <FontAwesomeIcon icon={faGoogle} className="mr-2 text-lg" />}
               Sign up with {provider.name}

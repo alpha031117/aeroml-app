@@ -1,7 +1,4 @@
 // src/app/layout.tsx
-import { getServerSession } from "next-auth";  // Import getServerSession
-import { authOptions } from "../pages/api/auth/[...nextauth]"; // Import your NextAuth options
-import ClientSessionWrapper from "../components/ClientSessionWrapper"; // Import the wrapper
 import { UserProvider } from "../contexts/UserContext"; // Import UserProvider
 import { Geist, Geist_Mono } from 'next/font/google'; 
 import { Metadata } from "next";  // Import Metadata for SEO
@@ -25,31 +22,19 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // Fetch session with error handling for JWT decryption failures
-  let session = null;
-  try {
-    session = await getServerSession(authOptions);
-  } catch (error) {
-    // If JWT decryption fails (e.g., secret changed or missing), log and continue without session
-    console.error('Session error (this is normal if NEXTAUTH_SECRET was recently changed):', error);
-    session = null;
-  }
-
   return (
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {/* Wrap children with UserProvider and ClientSessionWrapper */}
+        {/* Wrap children with UserProvider */}
         <UserProvider>
-          <ClientSessionWrapper session={session}>
-            {children}
-          </ClientSessionWrapper>
+          {children}
         </UserProvider>
       </body>
     </html>
