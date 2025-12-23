@@ -10,6 +10,22 @@ import NavBar from "@/components/navbar/navbar";
 import Footer from "@/components/footer/footer";
 import { Button } from '@/components/ui';
 import { Bot } from 'lucide-react';
+import {
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  ComposedChart,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  ReferenceLine
+} from 'recharts';
 
 // Type definitions for the API response
 interface KeyMetrics {
@@ -489,37 +505,273 @@ export default function ModelDetail() {
 
         {/* Gains/Lift Analysis */}
         <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-6">
-          <h3 className="text-lg font-semibold text-white mb-4">Gains/Lift Analysis</h3>
-          <p className="text-zinc-400 text-sm mb-4">Model performance across different population segments (Avg response rate: 26.54%)</p>
+          <h3 className="text-lg font-semibold text-white mb-2">Gains/Lift Analysis</h3>
+          <p className="text-zinc-400 text-sm mb-6">Model performance evaluation across population segments</p>
           
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-zinc-700">
-                  <th className="text-left py-3 px-4 text-zinc-400">Group</th>
-                  <th className="text-left py-3 px-4 text-zinc-400">Cumulative Data %</th>
-                  <th className="text-left py-3 px-4 text-zinc-400">Lift</th>
-                  <th className="text-left py-3 px-4 text-zinc-400">Cumulative Lift</th>
-                  <th className="text-left py-3 px-4 text-zinc-400">Response Rate</th>
-                  <th className="text-left py-3 px-4 text-zinc-400">Capture Rate</th>
-                  <th className="text-left py-3 px-4 text-zinc-400">Cumulative Gain</th>
-                </tr>
-              </thead>
-              <tbody>
-                {gainsLiftData.map((row, index) => (
-                  <tr key={index} className="border-b border-zinc-800">
-                    <td className="py-3 px-4 text-white font-medium">{row.group}</td>
-                    <td className="py-3 px-4 text-white font-mono">{formatPercentage(row.cumulative_data_fraction)}</td>
-                    <td className="py-3 px-4 text-white font-mono">{formatNumber(row.lift, 2)}</td>
-                    <td className="py-3 px-4 text-white font-mono">{formatNumber(row.cumulative_lift, 2)}</td>
-                    <td className="py-3 px-4 text-white font-mono">{formatPercentage(row.response_rate, 1)}</td>
-                    <td className="py-3 px-4 text-white font-mono">{formatPercentage(row.capture_rate, 1)}</td>
-                    <td className="py-3 px-4 text-white font-mono">{formatNumber(row.cumulative_gain, 1)}%</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {/* Filter out baseline row and prepare chart data */}
+          {(() => {
+            const chartData = gainsLiftData
+              .filter(row => row.group !== '---' && row.group !== 'N/A')
+              .map(row => ({
+                group: parseInt(row.group) || 0,
+                cumulativeDataPercent: row.cumulative_data_fraction * 100,
+                lift: row.lift,
+                cumulativeLift: row.cumulative_lift,
+                responseRate: row.response_rate * 100,
+                captureRate: row.capture_rate * 100,
+                cumulativeGain: row.cumulative_gain,
+                // Random baseline: diagonal line (y = x for cumulative gain)
+                randomBaseline: row.cumulative_data_fraction * 100
+              }))
+              .sort((a, b) => a.group - b.group);
+
+            // Calculate optimal cut-off points
+            const optimalCutoff = chartData.find(d => d.cumulativeGain >= 80) || chartData[chartData.length - 1];
+            const top10Percent = chartData.find(d => d.cumulativeDataPercent >= 10);
+            const top20Percent = chartData.find(d => d.cumulativeDataPercent >= 20);
+
+            // Custom tooltip style for dark theme
+            const CustomTooltip = ({ active, payload, label }: any) => {
+              if (active && payload && payload.length) {
+                return (
+                  <div className="bg-zinc-800 border border-zinc-700 rounded-lg p-3 shadow-lg">
+                    <p className="text-white font-medium mb-2">
+                      {typeof label === 'number' ? `Population: ${label.toFixed(1)}%` : `Group: ${label}`}
+                    </p>
+                    {payload.map((entry: any, index: number) => (
+                      <p key={index} className="text-sm" style={{ color: entry.color }}>
+                        {`${entry.name}: ${entry.value?.toFixed(2)}${entry.dataKey?.includes('Percent') || entry.dataKey?.includes('Rate') ? '%' : entry.dataKey?.includes('Gain') ? '%' : ''}`}
+                      </p>
+                    ))}
+                  </div>
+                );
+              }
+              return null;
+            };
+
+            return (
+              <div className="space-y-8">
+                {/* Cumulative Gains Curve with Random Baseline */}
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h4 className="text-md font-medium text-white mb-1">Cumulative Gains Curve</h4>
+                      <p className="text-xs text-zinc-500">
+                        Shows the percentage of positive responses captured by targeting top X% of population
+                      </p>
+                    </div>
+                  </div>
+                  <ResponsiveContainer width="100%" height={320}>
+                    <ComposedChart data={chartData} margin={{ top: 10, right: 30, left: 20, bottom: 40 }}>
+                      <defs>
+                        <linearGradient id="colorGain" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.2}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" />
+                      <XAxis 
+                        dataKey="cumulativeDataPercent" 
+                        stroke="#a1a1aa"
+                        label={{ value: 'Cumulative Population %', position: 'insideBottom', offset: -5, fill: '#a1a1aa', style: { fontSize: '12px' } }}
+                        tick={{ fill: '#a1a1aa', fontSize: 11 }}
+                        tickFormatter={(value) => value.toFixed(4)}
+                        domain={[0, 'dataMax']}
+                      />
+                      <YAxis 
+                        stroke="#a1a1aa"
+                        label={{ value: 'Cumulative Gain %', angle: -90, position: 'insideLeft', fill: '#a1a1aa', style: { fontSize: '12px' } }}
+                        tick={{ fill: '#a1a1aa', fontSize: 11 }}
+                        domain={[0, 100]}
+                      />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Legend wrapperStyle={{ color: '#a1a1aa', fontSize: '12px', paddingTop: '10px' }} />
+                      {/* Random baseline - diagonal line (y = x) */}
+                      <Line 
+                        type="linear" 
+                        dataKey="randomBaseline" 
+                        stroke="#71717a" 
+                        strokeWidth={2}
+                        strokeDasharray="5 5"
+                        dot={false}
+                        name="Random Baseline"
+                        legendType="line"
+                      />
+                      {/* Model performance */}
+                      <Area 
+                        type="monotone" 
+                        dataKey="cumulativeGain" 
+                        stroke="#3b82f6" 
+                        strokeWidth={2.5}
+                        fillOpacity={1} 
+                        fill="url(#colorGain)"
+                        name="Model Cumulative Gain"
+                      />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                  {optimalCutoff && (
+                    <div className="mt-3 text-xs text-zinc-400">
+                      <span className="text-zinc-300 font-medium">Insight:</span> Targeting top {optimalCutoff.cumulativeDataPercent.toFixed(1)}% captures {optimalCutoff.cumulativeGain.toFixed(1)}% of positive responses
+                      {top10Percent && top20Percent && (
+                        <span className="ml-4">
+                          • Top 10%: {top10Percent.cumulativeGain.toFixed(1)}% gain
+                          • Top 20%: {top20Percent.cumulativeGain.toFixed(1)}% gain
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Lift Chart with Baseline */}
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h4 className="text-md font-medium text-white mb-1">Lift Chart</h4>
+                      <p className="text-xs text-zinc-500">
+                        Measures how much better the model performs compared to random selection (baseline = 1.0)
+                      </p>
+                    </div>
+                  </div>
+                  <ResponsiveContainer width="100%" height={320}>
+                    <LineChart data={chartData} margin={{ top: 10, right: 30, left: 20, bottom: 40 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" />
+                      <XAxis 
+                        dataKey="cumulativeDataPercent" 
+                        stroke="#a1a1aa"
+                        label={{ value: 'Cumulative Population %', position: 'insideBottom', offset: -5, fill: '#a1a1aa', style: { fontSize: '12px' } }}
+                        tick={{ fill: '#a1a1aa', fontSize: 11 }}
+                        tickFormatter={(value) => value.toFixed(4)}
+                        domain={[0, 'dataMax']}
+                      />
+                      <YAxis 
+                        stroke="#a1a1aa"
+                        label={{ value: 'Lift', angle: -90, position: 'insideLeft', fill: '#a1a1aa', style: { fontSize: '12px' } }}
+                        tick={{ fill: '#a1a1aa', fontSize: 11 }}
+                        domain={[0, 'auto']}
+                      />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Legend wrapperStyle={{ color: '#a1a1aa', fontSize: '12px', paddingTop: '10px' }} />
+                      {/* Baseline at 1.0 - random targeting performance */}
+                      <ReferenceLine 
+                        y={1.0} 
+                        stroke="#71717a" 
+                        strokeWidth={2}
+                        strokeDasharray="5 5"
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="lift" 
+                        stroke="#10b981" 
+                        strokeWidth={2.5}
+                        dot={{ fill: '#10b981', r: 3.5 }}
+                        activeDot={{ r: 5 }}
+                        name="Lift"
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="cumulativeLift" 
+                        stroke="#8b5cf6" 
+                        strokeWidth={2.5}
+                        dot={{ fill: '#8b5cf6', r: 3.5 }}
+                        activeDot={{ r: 5 }}
+                        name="Cumulative Lift"
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                  <div className="mt-3 text-xs text-zinc-400">
+                    <span className="text-zinc-300 font-medium">Interpretation:</span> Higher lift values indicate better model performance. A lift of {chartData[0]?.lift.toFixed(2)} means the model is {chartData[0]?.lift.toFixed(1)}x better than random targeting.
+                  </div>
+                </div>
+
+                {/* Response Rate vs Population */}
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h4 className="text-md font-medium text-white mb-1">Response Rate vs Population</h4>
+                      <p className="text-xs text-zinc-500">
+                        Shows how response rate changes across different population segments
+                      </p>
+                    </div>
+                  </div>
+                  <ResponsiveContainer width="100%" height={280}>
+                    <LineChart data={chartData} margin={{ top: 10, right: 30, left: 20, bottom: 40 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" />
+                      <XAxis 
+                        dataKey="cumulativeDataPercent" 
+                        stroke="#a1a1aa"
+                        label={{ value: 'Cumulative Population %', position: 'insideBottom', offset: -5, fill: '#a1a1aa', style: { fontSize: '12px' } }}
+                        tick={{ fill: '#a1a1aa', fontSize: 11 }}
+                        tickFormatter={(value) => value.toFixed(4)}
+                        domain={[0, 'dataMax']}
+                      />
+                      <YAxis 
+                        stroke="#a1a1aa"
+                        label={{ value: 'Response Rate %', angle: -90, position: 'insideLeft', fill: '#a1a1aa', style: { fontSize: '12px' } }}
+                        tick={{ fill: '#a1a1aa', fontSize: 11 }}
+                        domain={[0, 100]}
+                      />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Legend wrapperStyle={{ color: '#a1a1aa', fontSize: '12px', paddingTop: '10px' }} />
+                      <Line 
+                        type="monotone" 
+                        dataKey="responseRate" 
+                        stroke="#f59e0b" 
+                        strokeWidth={2.5}
+                        dot={{ fill: '#f59e0b', r: 4 }}
+                        activeDot={{ r: 6 }}
+                        name="Response Rate %"
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Capture Rate Curve */}
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h4 className="text-md font-medium text-white mb-1">Capture Rate Curve</h4>
+                      <p className="text-xs text-zinc-500">
+                        Percentage of positive responses captured at each population segment
+                      </p>
+                    </div>
+                  </div>
+                  <ResponsiveContainer width="100%" height={280}>
+                    <LineChart data={chartData} margin={{ top: 10, right: 30, left: 20, bottom: 40 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" />
+                      <XAxis 
+                        dataKey="cumulativeDataPercent" 
+                        stroke="#a1a1aa"
+                        label={{ value: 'Cumulative Population %', position: 'insideBottom', offset: -5, fill: '#a1a1aa', style: { fontSize: '12px' } }}
+                        tick={{ fill: '#a1a1aa', fontSize: 11 }}
+                        tickFormatter={(value) => value.toFixed(4)}
+                        domain={[0, 'dataMax']}
+                      />
+                      <YAxis 
+                        stroke="#a1a1aa"
+                        label={{ value: 'Capture Rate %', angle: -90, position: 'insideLeft', fill: '#a1a1aa', style: { fontSize: '12px' } }}
+                        tick={{ fill: '#a1a1aa', fontSize: 11 }}
+                        domain={[0, 100]}
+                      />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Legend wrapperStyle={{ color: '#a1a1aa', fontSize: '12px', paddingTop: '10px' }} />
+                      <Line 
+                        type="monotone" 
+                        dataKey="captureRate" 
+                        stroke="#ef4444" 
+                        strokeWidth={2.5}
+                        dot={{ fill: '#ef4444', r: 4 }}
+                        activeDot={{ r: 6 }}
+                        name="Capture Rate %"
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                  <div className="mt-3 text-xs text-zinc-400">
+                    <span className="text-zinc-300 font-medium">Business Insight:</span> Higher capture rates in early segments indicate the model successfully identifies high-value targets. Consider focusing campaigns on top 10-20% segments.
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </div>
 
