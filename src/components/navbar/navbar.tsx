@@ -36,7 +36,7 @@ const NavBar = () => {
   const navLinks = [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard },
     { name: 'Model History', href: '/model-history', icon: History },
-    { name: 'Documentation', href: '/documentation', icon: BookOpen },
+    { name: 'Documentation', href: '/docs', icon: BookOpen },
   ];
 
   const handleSignOut = async () => {
