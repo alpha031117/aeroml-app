@@ -777,7 +777,7 @@ export default function ModelTraining() {
                                 icon={<Bot/>}
                                 onClick={handleAIEnhancement}
                             >
-                                Ask AERO AI for Model Enhancement
+                                Model Explainability
                             </Button>
                         </div>
                         <Button

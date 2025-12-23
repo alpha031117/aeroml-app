@@ -1,13 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { buildApiUrl } from '@/lib/api';
 import { StatCard } from '@/components/ui/stat-card';
 import { useAuth } from '@/hooks/useAuth';
 import NavBar from "@/components/navbar/navbar";
 import Footer from "@/components/footer/footer";
+import { Button } from '@/components/ui';
+import { Bot } from 'lucide-react';
 
 // Type definitions for the API response
 interface KeyMetrics {
@@ -64,6 +66,7 @@ interface ModelPerformanceResponse {
 
 export default function ModelDetail() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const sessionId = searchParams?.get('session_id') || 'default';
   const { userId, isLoading: authLoading } = useAuth();
   
@@ -291,17 +294,33 @@ export default function ModelDetail() {
   const maxMetricsData = parseMaxMetrics(data.full_performance_details?.max_criteria_and_metric_scores || '');
   const gainsLiftData = parseGainsLiftTable(data.full_performance_details?.gains_lift_table || '');
 
+  const handleMlEnhancement = () => {
+    if (sessionId && sessionId !== 'default') {
+      router.push(`/model-enhancement?session_id=${sessionId}`);
+    }
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-zinc-950 text-white">
       <NavBar />
       
       <div className="flex-grow max-w-7xl mx-auto px-6 py-8 w-full">
         {/* Section Title */}
-        <div className="mb-6">
-          <h4 className="text-xl text-gray-400 mb-2">Model Performance</h4>
-          <h2 className="text-xl sm:text-2xl font-medium text-center sm:text-left">
-            Top Model Performance Details
-          </h2>
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h4 className="text-xl text-gray-400 mb-2">Model Performance</h4>
+            <h2 className="text-xl sm:text-2xl font-medium text-center sm:text-left">
+              Top Model Performance Details
+            </h2>
+          </div>
+          <Button
+            variant="outline"
+            className="cursor-pointer hover:bg-zinc-800 border-zinc-700 whitespace-nowrap shrink-0"
+            onClick={handleMlEnhancement}
+            icon={<Bot/>}
+          >
+            Model Explainability
+          </Button>
         </div>
 
         {/* Model Info */}

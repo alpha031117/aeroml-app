@@ -189,6 +189,11 @@ export default function ModelHistory() {
     router.push(`/playground?session_id=${sessionId}`);
   };
 
+  const handleMlEnhancement = (e: React.MouseEvent, sessionId: string) => {
+    e.stopPropagation(); // Prevent row click
+    router.push(`/model-enhancement?session_id=${sessionId}`);
+  };
+
   if (authLoading || loading) {
     return (
       <div className="flex flex-col min-h-screen bg-black">
@@ -315,12 +320,11 @@ export default function ModelHistory() {
                         </td>
                         <td className="py-4 px-6 text-right whitespace-nowrap min-w-[140px]">
                           {!isFailed && (
-                            <div className="inline-flex justify-end w-full">
+                            <div className="inline-flex justify-end w-full gap-2">
                               <Button
                                 variant="outline"
                                 className="cursor-pointer hover:bg-zinc-800 border-zinc-700 whitespace-nowrap shrink-0"
                                 onClick={(e) => handleTestModel(e, session.session_id)}
-                                icon={<PaperPlaneIcon className="w-3 h-3" />}
                               >
                                 Test Model
                               </Button>
