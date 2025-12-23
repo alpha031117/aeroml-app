@@ -59,7 +59,7 @@ const SignIn = () => {
         } catch {
           errorData = { message: `HTTP ${response.status}: ${response.statusText}` };
         }
-        throw new Error(errorData.message || `Login failed (${response.status}). Please check your credentials.`);
+        throw new Error(errorData.message || `Login failed. Invalid credentials.`);
       }
 
       const userData = await response.json();

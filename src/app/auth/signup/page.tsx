@@ -175,7 +175,7 @@ const SignUp = () => {
             type="submit"
             disabled={isLoading}
             variant="primary"
-            className="w-full justify-center py-3 text-base font-medium"
+            className="w-full justify-center py-3 text-base font-medium cursor-pointer"
           >
             {isLoading ? 'Signing Up...' : 'Sign Up'}
           </Button>
@@ -202,7 +202,7 @@ const SignUp = () => {
               key={provider.name}
               onClick={() => signIn(provider.id, { callbackUrl: '/model-prompt' })}
               variant="outline"
-              className="w-full justify-center py-3 text-base font-medium border-zinc-700 hover:bg-zinc-800/50 hover:text-white transition-colors"
+              className="w-full justify-center py-3 text-base font-medium border-zinc-700 hover:bg-zinc-800/50 hover:text-white transition-colors cursor-pointer"
             >
               {provider.name === 'Google' && <FontAwesomeIcon icon={faGoogle} className="mr-2 text-lg" />}
               Sign up with {provider.name}
