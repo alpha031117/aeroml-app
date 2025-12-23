@@ -274,9 +274,10 @@ export default function DatasetUploadPage() {
   const handleContinueToTraining = useCallback((forceProceed: boolean = false) => {
     if (!validationResult || !uploadedFile || !prompt) return;
 
-    // Check confidence score only if not forcing
-    if (!forceProceed && validationResult.validation.confidence_score < 80) {
-      // Show warning for low confidence - this will be handled in the UI
+    // Check eligibility - only Eligible datasets can proceed without forcing
+    // Conditionally Eligible and Not Eligible require forceProceed=true
+    if (!forceProceed && validationResult.validation.confidence_score < 85) {
+      // Show warning for non-eligible datasets - this will be handled in the UI
       return;
     }
 
@@ -324,6 +325,49 @@ export default function DatasetUploadPage() {
     setValidationResult(null);
     setRawFileData(null);
     setValidationError(null);
+  }, []);
+
+  // Helper function to determine eligibility type based on confidence score
+  const getEligibilityType = useCallback((confidenceScore: number): {
+    type: 'eligible' | 'conditionally-eligible' | 'not-eligible';
+    label: string;
+    icon: string;
+    description: string;
+    color: string;
+    bgColor: string;
+    borderColor: string;
+  } => {
+    if (confidenceScore >= 85) {
+      return {
+        type: 'eligible',
+        label: 'Eligible',
+        icon: '✅',
+        description: 'Dataset fully meets requirements and can be used directly',
+        color: 'text-green-400',
+        bgColor: 'bg-green-500/10',
+        borderColor: 'border-green-500/20'
+      };
+    } else if (confidenceScore >= 60) {
+      return {
+        type: 'conditionally-eligible',
+        label: 'Conditionally Eligible',
+        icon: '⚠️',
+        description: 'Dataset is usable but requires cleaning, transformation, or manual review',
+        color: 'text-yellow-400',
+        bgColor: 'bg-yellow-500/10',
+        borderColor: 'border-yellow-500/20'
+      };
+    } else {
+      return {
+        type: 'not-eligible',
+        label: 'Not Eligible',
+        icon: '❌',
+        description: 'Dataset fails key requirements and should not be used',
+        color: 'text-red-400',
+        bgColor: 'bg-red-500/10',
+        borderColor: 'border-red-500/20'
+      };
+    }
   }, []);
 
   return (
@@ -524,44 +568,28 @@ export default function DatasetUploadPage() {
               </div>
 
               {/* Validation Results */}
-              {validationResult && (
-                <div className="mt-6 space-y-4">
-                  <h3 className="text-lg font-semibold text-white">Dataset Validation Results</h3>
-                  
-                  {/* Low Confidence Warning */}
-                  {validationResult.validation.confidence_score < 80 && (
-                    <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4 flex items-start gap-3">
-                      <AlertTriangle className="w-5 h-5 text-yellow-400 mt-0.5 flex-shrink-0" />
-                      <div className="flex-1">
-                        <p className="text-yellow-400 font-medium mb-1">Low Confidence Score</p>
-                        <p className="text-yellow-300/80 text-sm">
-                          The dataset validation confidence is below 80%. Please review the potential issues and consider refining your dataset or prompt before proceeding to training.
-                        </p>
+              {validationResult && (() => {
+                const eligibility = getEligibilityType(validationResult.validation.confidence_score);
+                return (
+                  <div className="mt-6 space-y-4">
+                    <h3 className="text-lg font-semibold text-white">Dataset Validation Results</h3>
+                    
+                    {/* Eligibility Status */}
+                    <div className={`${eligibility.bgColor} ${eligibility.borderColor} border rounded-xl p-6`}>
+                      <div className="flex items-start gap-4">
+                        <div className="text-3xl">{eligibility.icon}</div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <h4 className={`text-xl font-bold ${eligibility.color}`}>
+                              {eligibility.label}
+                            </h4>
+                          </div>
+                          <p className="text-zinc-300 text-sm leading-relaxed">
+                            {eligibility.description}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  )}
-                  
-                  {/* Confidence Score */}
-                  <div className="bg-zinc-900 rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-zinc-400 text-sm">Confidence Score</span>
-                      <span className={`text-lg font-bold ${
-                        validationResult.validation.confidence_score >= 80 ? 'text-green-400' :
-                        validationResult.validation.confidence_score >= 60 ? 'text-yellow-400' : 'text-red-400'
-                      }`}>
-                        {validationResult.validation.confidence_score}%
-                      </span>
-                    </div>
-                    <div className="w-full bg-zinc-700 rounded-full h-2">
-                      <div 
-                        className={`h-2 rounded-full ${
-                          validationResult.validation.confidence_score >= 80 ? 'bg-green-400' :
-                          validationResult.validation.confidence_score >= 60 ? 'bg-yellow-400' : 'bg-red-400'
-                        }`}
-                        style={{ width: `${validationResult.validation.confidence_score}%` }}
-                      ></div>
-                    </div>
-                  </div>
 
                   {/* Validation Message */}
                   <div className="bg-zinc-900 rounded-lg p-4">
@@ -588,8 +616,8 @@ export default function DatasetUploadPage() {
                       <ul className="space-y-1">
                         {validationResult.validation.potential_issues.map((issue, index) => (
                           <li key={index} className="text-red-400 text-sm flex items-start gap-2">
-                            <span className="text-red-400 mt-1">•</span>
-                            <span>{issue}</span>
+                            <span className="text-red-400 flex-shrink-0">•</span>
+                            <span className="flex-1">{issue}</span>
                           </li>
                         ))}
                       </ul>
@@ -603,8 +631,8 @@ export default function DatasetUploadPage() {
                       <ul className="space-y-1">
                         {validationResult.validation.suggested_preprocessing.map((step, index) => (
                           <li key={index} className="text-zinc-300 text-sm flex items-start gap-2">
-                            <span className="text-cyan-400 mt-1">•</span>
-                            <span>{step}</span>
+                            <span className="text-cyan-400 flex-shrink-0">•</span>
+                            <span className="flex-1">{step}</span>
                           </li>
                         ))}
                       </ul>
@@ -670,8 +698,9 @@ export default function DatasetUploadPage() {
                       </div>
                     </div>
                   )}
-                </div>
-              )}
+                  </div>
+                );
+              })()}
 
               {/* Action Buttons */}
               <div className="flex justify-between items-center mt-6">
@@ -708,32 +737,50 @@ export default function DatasetUploadPage() {
                       Re-validate
                     </button>
                     
-                    {validationResult.validation.confidence_score < 80 ? (
-                      <div className="flex gap-2">
-                        <button
-                          onClick={clearUpload}
-                          className="inline-flex items-center gap-2 bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-full text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-yellow-500 cursor-pointer"
-                        >
-                          <Upload className="w-4 h-4" />
-                          Upload New Dataset
-                        </button>
-                        <button
-                          onClick={() => handleContinueToTraining(true)}
-                          className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-full text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-red-500 cursor-pointer"
-                        >
-                          <AlertTriangle className="w-4 h-4" />
-                          Proceed Anyway
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => handleContinueToTraining(false)}
-                        className="inline-flex items-center gap-2 bg-white hover:bg-gray-50 text-gray-900 border border-gray-300 px-4 py-2 rounded-lg text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-500 cursor-pointer"
-                      >
-                        <ArrowRight className="w-4 h-4" />
-                        Continue to Training
-                      </button>
-                    )}
+                    {(() => {
+                      const eligibility = getEligibilityType(validationResult.validation.confidence_score);
+                      if (eligibility.type === 'eligible') {
+                        return (
+                          <button
+                            onClick={() => handleContinueToTraining(false)}
+                            className="inline-flex items-center gap-2 bg-white hover:bg-gray-50 text-gray-900 border border-gray-300 px-4 py-2 rounded-lg text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-500 cursor-pointer"
+                          >
+                            <ArrowRight className="w-4 h-4" />
+                            Continue to Training
+                          </button>
+                        );
+                      } else if (eligibility.type === 'conditionally-eligible') {
+                        return (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={clearUpload}
+                              className="inline-flex items-center gap-2 bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-full text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-yellow-500 cursor-pointer"
+                            >
+                              <Upload className="w-4 h-4" />
+                              Upload New Dataset
+                            </button>
+                            <button
+                              onClick={() => handleContinueToTraining(true)}
+                              className="inline-flex items-center gap-2 bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-full text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-yellow-500 cursor-pointer"
+                            >
+                              <AlertTriangle className="w-4 h-4" />
+                              Proceed Anyway
+                            </button>
+                          </div>
+                        );
+                      } else {
+                        // Not Eligible - only allow uploading new dataset
+                        return (
+                          <button
+                            onClick={clearUpload}
+                            className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-full text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-red-500 cursor-pointer"
+                          >
+                            <Upload className="w-4 h-4" />
+                            Upload New Dataset
+                          </button>
+                        );
+                      }
+                    })()}
                   </>
                 )}
               </div>
