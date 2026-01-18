@@ -1,8 +1,12 @@
 'use client';
 
+import { Suspense } from 'react';
 import Link from 'next/link';
 import NavBar from '@/components/navbar/navbar';
 import Footer from '@/components/footer/footer';
+
+// Force dynamic rendering to avoid prerender errors
+export const dynamic = 'force-dynamic';
 
 export default function PrivacyPolicyPage() {
   return (
@@ -12,7 +16,9 @@ export default function PrivacyPolicyPage() {
         background: "linear-gradient(180deg, #080609 20%, #2F1926 50%, #080609 90%)",
       }}
     >
-      <NavBar />
+      <Suspense fallback={<div className="h-16 bg-black/80 backdrop-blur-md border-b border-white/10" />}>
+        <NavBar />
+      </Suspense>
       
       <div className="w-full max-w-4xl px-6 py-12 text-white">
         <div className="p-8 md:p-12">
@@ -23,9 +29,9 @@ export default function PrivacyPolicyPage() {
           <section className="mb-8">
             <h2 className="text-2xl font-semibold mb-4 text-white">1. Introduction</h2>
             <p className="text-zinc-300 mb-4 leading-relaxed">
-              At AeroML ("we," "us," or "our"), we are committed to protecting your privacy. This Privacy Policy 
+              At AeroML (&quot;we,&quot; &quot;us,&quot; or &quot;our&quot;), we are committed to protecting your privacy. This Privacy Policy 
               explains how we collect, use, disclose, and safeguard your information when you use our website, services, 
-              and applications (collectively, the "Service").
+              and applications (collectively, the &quot;Service&quot;).
             </p>
             <p className="text-zinc-300 leading-relaxed">
               Please read this Privacy Policy carefully. By using our Service, you agree to the collection and use of 
@@ -178,7 +184,7 @@ export default function PrivacyPolicyPage() {
 
           {/* Children's Privacy */}
           <section className="mb-8">
-            <h2 className="text-2xl font-semibold mb-4 text-white">9. Children's Privacy</h2>
+            <h2 className="text-2xl font-semibold mb-4 text-white">9. Children&apos;s Privacy</h2>
             <p className="text-zinc-300 leading-relaxed">
               Our Service is not intended for children under the age of 13. We do not knowingly collect personal information 
               from children under 13. If you are a parent or guardian and believe your child has provided us with personal 
@@ -205,7 +211,7 @@ export default function PrivacyPolicyPage() {
             </p>
             <ul className="list-disc list-inside text-zinc-300 mb-4 space-y-2 ml-4">
               <li>Posting the new Privacy Policy on this page</li>
-              <li>Updating the "Last updated" date at the top of this page</li>
+              <li>Updating the &quot;Last updated&quot; date at the top of this page</li>
               <li>Sending you an email notification (if applicable)</li>
               <li>Displaying a prominent notice on our Service</li>
             </ul>

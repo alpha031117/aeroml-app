@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, Suspense } from "react";
 import { Send, Download, Loader2 } from "lucide-react";
 import NavBar from "@/components/navbar/navbar";
 import Footer from "@/components/footer/footer";
@@ -7,6 +7,9 @@ import { Button } from "@/components/ui/button";
 import { buildApiUrl } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import ProgressStepper from "@/components/ProgressStepper";
+
+// Force dynamic rendering to avoid prerender errors
+export const dynamic = 'force-dynamic';
 
 export default function Playground() {
     type Msg = { id: string; role: "user" | "assistant"; content: string };
@@ -245,7 +248,9 @@ export default function Playground() {
     return (
         <div className="flex flex-col min-h-screen bg-black text-neutral-100">
             {/* Top nav */}
-            <NavBar />
+            <Suspense fallback={<div className="h-16 bg-black/80 backdrop-blur-md border-b border-white/10" />}>
+              <NavBar />
+            </Suspense>
             <ProgressStepper currentStep={4} />
 
             {/* Main layout */}

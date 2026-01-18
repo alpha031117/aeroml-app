@@ -1,13 +1,15 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { buildApiUrl } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import NavBar from "@/components/navbar/navbar";
 import Footer from "@/components/footer/footer";
 import { Button } from '@/components/ui';
-import { PaperPlaneIcon } from "@radix-ui/react-icons";
+
+// Force dynamic rendering to avoid prerender errors
+export const dynamic = 'force-dynamic';
 
 // Type definitions for the API response
 interface DatasetShape {
@@ -105,7 +107,7 @@ export default function ModelHistory() {
           try {
             const errData = await response.json();
             errorDetail = errData.detail || errData.message || '';
-          } catch (e) {
+          } catch {
             // Ignore JSON parse error
           }
           throw new Error(`HTTP error! status: ${response.status}${errorDetail ? ` - ${errorDetail}` : ''}`);
@@ -189,15 +191,13 @@ export default function ModelHistory() {
     router.push(`/playground?session_id=${sessionId}`);
   };
 
-  const handleMlEnhancement = (e: React.MouseEvent, sessionId: string) => {
-    e.stopPropagation(); // Prevent row click
-    router.push(`/model-enhancement?session_id=${sessionId}`);
-  };
 
   if (authLoading || loading) {
     return (
       <div className="flex flex-col min-h-screen bg-black">
-        <NavBar />
+        <Suspense fallback={<div className="h-16 bg-black/80 backdrop-blur-md border-b border-white/10" />}>
+          <NavBar />
+        </Suspense>
         <div className="flex-grow flex items-center justify-center">
           <div className="text-zinc-400">Loading model history...</div>
         </div>
@@ -209,7 +209,9 @@ export default function ModelHistory() {
   if (!userId) {
     return (
       <div className="flex flex-col min-h-screen bg-black">
-        <NavBar />
+        <Suspense fallback={<div className="h-16 bg-black/80 backdrop-blur-md border-b border-white/10" />}>
+          <NavBar />
+        </Suspense>
         <div className="flex-grow flex items-center justify-center">
           <div className="text-zinc-400">Please log in to view model history</div>
         </div>
@@ -221,7 +223,9 @@ export default function ModelHistory() {
   if (error) {
     return (
       <div className="flex flex-col min-h-screen bg-black">
-        <NavBar />
+        <Suspense fallback={<div className="h-16 bg-black/80 backdrop-blur-md border-b border-white/10" />}>
+          <NavBar />
+        </Suspense>
         <div className="flex-grow flex items-center justify-center flex-col gap-4">
           <div className="text-red-400">Error: {error}</div>
           <div className="text-zinc-500 text-sm">User ID: {userId}</div>
@@ -239,7 +243,9 @@ export default function ModelHistory() {
 
   return (
     <div className="flex flex-col min-h-screen bg-black text-white">
-      <NavBar />
+      <Suspense fallback={<div className="h-16 bg-black/80 backdrop-blur-md border-b border-white/10" />}>
+        <NavBar />
+      </Suspense>
       <div className="flex-grow w-full max-w-7xl mx-auto px-6 py-8">
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">

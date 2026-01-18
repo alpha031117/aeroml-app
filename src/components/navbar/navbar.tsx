@@ -23,7 +23,7 @@ const NavBar = () => {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { setUser, clearUser } = useUser();
+  const { clearUser } = useUser();
   const { isAuthenticated, displayName, firstLetter, isLoading } = useAuth();
   
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);

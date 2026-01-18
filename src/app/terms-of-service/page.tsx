@@ -1,8 +1,12 @@
 'use client';
 
+import { Suspense } from 'react';
 import Link from 'next/link';
 import NavBar from '@/components/navbar/navbar';
 import Footer from '@/components/footer/footer';
+
+// Force dynamic rendering to avoid prerender errors
+export const dynamic = 'force-dynamic';
 
 export default function TermsOfServicePage() {
   return (
@@ -12,7 +16,9 @@ export default function TermsOfServicePage() {
         background: "linear-gradient(180deg, #080609 20%, #2F1926 50%, #080609 90%)",
       }}
     >
-      <NavBar />
+      <Suspense fallback={<div className="h-16 bg-black/80 backdrop-blur-md border-b border-white/10" />}>
+        <NavBar />
+      </Suspense>
       
       <div className="w-full max-w-4xl px-6 py-12 text-white">
         <div className="p-8 md:p-12">
@@ -23,8 +29,8 @@ export default function TermsOfServicePage() {
           <section className="mb-8">
             <h2 className="text-2xl font-semibold mb-4 text-white">1. Introduction</h2>
             <p className="text-zinc-300 mb-4 leading-relaxed">
-              Welcome to AeroML. These Terms of Service ("Terms") govern your access to and use of our website, 
-              services, and applications (collectively, the "Service") operated by AeroML ("we," "us," or "our").
+              Welcome to AeroML. These Terms of Service (&quot;Terms&quot;) govern your access to and use of our website, 
+              services, and applications (collectively, the &quot;Service&quot;) operated by AeroML (&quot;we,&quot; &quot;us,&quot; or &quot;our&quot;).
             </p>
             <p className="text-zinc-300 mb-4 leading-relaxed">
               By accessing or using our Service, you agree to be bound by these Terms. If you disagree with any 
@@ -44,7 +50,7 @@ export default function TermsOfServicePage() {
             </p>
             <ul className="list-disc list-inside text-zinc-300 mb-4 space-y-2 ml-4">
               <li>Posting the updated Terms on this page</li>
-              <li>Updating the "Last updated" date at the top of this page</li>
+              <li>Updating the &quot;Last updated&quot; date at the top of this page</li>
               <li>Sending you an email notification (if applicable)</li>
               <li>Displaying a prominent notice on our Service</li>
             </ul>
@@ -115,7 +121,7 @@ export default function TermsOfServicePage() {
             </ul>
             <p className="text-zinc-300 mb-4 leading-relaxed">
               <strong className="text-white">User Content:</strong> You retain ownership of any content you submit, 
-              post, or display on or through the Service ("User Content"). By submitting User Content, you grant us 
+              post, or display on or through the Service (&quot;User Content&quot;). By submitting User Content, you grant us 
               a worldwide, non-exclusive, royalty-free license to use, reproduce, modify, adapt, publish, and 
               distribute your User Content for the purpose of operating and providing the Service.
             </p>
@@ -129,8 +135,8 @@ export default function TermsOfServicePage() {
           <section className="mb-8">
             <h2 className="text-2xl font-semibold mb-4 text-white">6. Limitations of Liability and Disclaimers</h2>
             <p className="text-zinc-300 mb-4 leading-relaxed">
-              <strong className="text-white">Disclaimer of Warranties:</strong> The Service is provided on an "AS IS" 
-              and "AS AVAILABLE" basis. We disclaim all warranties, express or implied, including but not limited to 
+              <strong className="text-white">Disclaimer of Warranties:</strong> The Service is provided on an &quot;AS IS&quot; 
+              and &quot;AS AVAILABLE&quot; basis. We disclaim all warranties, express or implied, including but not limited to 
               warranties of merchantability, fitness for a particular purpose, and non-infringement. We do not warrant 
               that the Service will be uninterrupted, secure, or error-free.
             </p>

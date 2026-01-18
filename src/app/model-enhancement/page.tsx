@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Footer from "@/components/footer/footer";
 import NavBar from "@/components/navbar/navbar";
@@ -33,7 +33,10 @@ interface RecommendationStep {
   isCompleted?: boolean;
 }
 
-export default function ModelEnhancement() {
+// Force dynamic rendering to avoid prerender errors with useSearchParams
+export const dynamic = 'force-dynamic';
+
+function ModelEnhancementContent() {
   const searchParams = useSearchParams();
   const { userId, isLoading: authLoading } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
@@ -41,22 +44,8 @@ export default function ModelEnhancement() {
   const [parsedSteps, setParsedSteps] = useState<RecommendationStep[]>([]);
   const [introText, setIntroText] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
-  const [sessionId, setSessionId] = useState<string | null>(null);
 
-  useEffect(() => {
-    const sessionIdParam = searchParams?.get('session_id');
-    if (sessionIdParam) {
-      setSessionId(sessionIdParam);
-      if (!authLoading && userId) {
-        fetchRecommendations(sessionIdParam);
-      }
-    } else {
-      setError('No session ID provided. Please complete model training first.');
-      setIsLoading(false);
-    }
-  }, [searchParams, userId, authLoading]);
-
-  const fetchRecommendations = async (sessionId: string) => {
+  const fetchRecommendations = useCallback(async (sessionId: string) => {
     if (authLoading) {
       return; // Wait for auth to finish loading
     }
@@ -90,7 +79,19 @@ export default function ModelEnhancement() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [userId, authLoading]);
+
+  useEffect(() => {
+    const sessionIdParam = searchParams?.get('session_id');
+    if (sessionIdParam) {
+      if (!authLoading && userId) {
+        fetchRecommendations(sessionIdParam);
+      }
+    } else {
+      setError('No session ID provided. Please complete model training first.');
+      setIsLoading(false);
+    }
+  }, [searchParams, userId, authLoading, fetchRecommendations]);
 
   const parseRecommendations = (markdown: string): { intro: string; steps: RecommendationStep[] } => {
     const steps: RecommendationStep[] = [];
@@ -226,7 +227,9 @@ export default function ModelEnhancement() {
   if (isLoading) {
     return (
       <div className="flex flex-col min-h-screen bg-black">
-        <NavBar />
+        <Suspense fallback={<div className="h-16 bg-black/80 backdrop-blur-md border-b border-white/10" />}>
+          <NavBar />
+        </Suspense>
         <div className="flex-grow flex items-center justify-center">
           <Loader />
         </div>
@@ -238,7 +241,9 @@ export default function ModelEnhancement() {
   if (error) {
     return (
       <div className="flex flex-col min-h-screen bg-black">
-        <NavBar />
+        <Suspense fallback={<div className="h-16 bg-black/80 backdrop-blur-md border-b border-white/10" />}>
+          <NavBar />
+        </Suspense>
         <div className="flex-grow flex items-center justify-center">
           <div className="text-center">
             <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
@@ -256,7 +261,9 @@ export default function ModelEnhancement() {
 
   return (
     <div className="flex flex-col min-h-screen bg-black">
-      <NavBar />
+      <Suspense fallback={<div className="h-16 bg-black/80 backdrop-blur-md border-b border-white/10" />}>
+        <NavBar />
+      </Suspense>
       
       <main className="flex-grow">
         <section className="w-full max-w-5xl mx-auto px-4 py-16 text-white">
@@ -322,7 +329,7 @@ export default function ModelEnhancement() {
               </p>
             )}
             
-            {parsedSteps.map((step, index) => (
+            {parsedSteps.map((step) => (
               <div 
                 key={step.id}
                 className={`bg-zinc-900 rounded-xl border transition-all duration-200 ${
@@ -397,5 +404,23 @@ export default function ModelEnhancement() {
 
       <Footer />
     </div>
+  );
+}
+
+export default function ModelEnhancement() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col min-h-screen bg-black">
+        <Suspense fallback={<div className="h-16 bg-black/80 backdrop-blur-md border-b border-white/10" />}>
+          <NavBar />
+        </Suspense>
+        <div className="flex-grow flex items-center justify-center">
+          <div className="text-zinc-400">Loading...</div>
+        </div>
+        <Footer />
+      </div>
+    }>
+      <ModelEnhancementContent />
+    </Suspense>
   );
 }

@@ -1,15 +1,13 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import NavBar from '@/components/navbar/navbar';
 import Footer from '@/components/footer/footer';
 import {
   Search,
   Home,
   BookOpen,
-  Clock,
   ChevronRight,
   FileText,
   Upload,
@@ -23,12 +21,14 @@ import {
   X,
 } from 'lucide-react';
 
+// Force dynamic rendering to avoid prerender errors
+export const dynamic = 'force-dynamic';
+
 export default function DocumentationPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('');
   const [searchResults, setSearchResults] = useState<Array<{ id: string; name: string; type: 'section' | 'nav' }>>([]);
-  const router = useRouter();
   const contentRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -184,7 +184,9 @@ export default function DocumentationPage() {
         background: "linear-gradient(180deg, #080609 20%, #2F1926 50%, #080609 90%)",
       }}
     >
-      <NavBar />
+      <Suspense fallback={<div className="h-16 bg-black/80 backdrop-blur-md border-b border-white/10" />}>
+        <NavBar />
+      </Suspense>
 
       <div className="flex flex-1">
         {/* Left Sidebar */}
@@ -424,7 +426,7 @@ export default function DocumentationPage() {
                   <li className="flex items-start gap-3">
                     <span className="text-green-400 mt-1">✓</span>
                     <div>
-                      <strong className="text-white">Smart Dataset Creation:</strong> Tell us what you're building, 
+                      <strong className="text-white">Smart Dataset Creation:</strong> Tell us what you&apos;re building, 
                       and our AI Agent will generate the perfect dataset for your model.
                     </div>
                   </li>
@@ -616,7 +618,7 @@ export default function DocumentationPage() {
             <section id="model-training" className="mb-12">
               <h2 className="text-3xl font-semibold mb-4">Model Training</h2>
               <p className="text-zinc-300 leading-relaxed mb-6">
-                Train your model using AeroML's automated machine learning pipeline powered by H2O.ai.
+                Train your model using AeroML&apos;s automated machine learning pipeline powered by H2O.ai.
               </p>
 
               <div className="bg-zinc-800/30 border border-zinc-700 rounded-lg p-6 mb-4">
@@ -633,7 +635,7 @@ export default function DocumentationPage() {
                 <h3 className="text-lg font-semibold mb-3 text-white">Real-Time Monitoring</h3>
                 <p className="text-zinc-300 mb-4">
                   Monitor your training progress in real-time with live logs and performance metrics. 
-                  You'll see updates as the model trains, including:
+                  You&apos;ll see updates as the model trains, including:
                 </p>
                 <ul className="list-disc list-inside text-zinc-300 space-y-2 ml-4">
                   <li>Training progress and status</li>

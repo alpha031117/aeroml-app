@@ -1,9 +1,13 @@
 'use client';
 
+import { Suspense } from 'react';
 import Footer from "@/components/footer/footer";
 import Features from "@/components/landing-features/features";
 import Hero from "@/components/landing_hero/hero";
 import NavBar from "@/components/navbar/navbar";
+
+// Force dynamic rendering to avoid prerender errors
+export const dynamic = 'force-dynamic';
 
 export default function Home() {
   return (
@@ -14,7 +18,9 @@ export default function Home() {
       }}
     >
       {/* Nav Bar */}
-      <NavBar />
+      <Suspense fallback={<div className="h-16 bg-black/80 backdrop-blur-md border-b border-white/10" />}>
+        <NavBar />
+      </Suspense>
 
       <div className="flex flex-col items-center justify-center flex-grow">
         {/* Main content of your app goes here */}

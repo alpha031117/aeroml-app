@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import * as XLSX from 'xlsx';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,14 @@ import NavBar from "@/components/navbar/navbar";
 import Footer from "@/components/footer/footer";
 import ProgressStepper from "@/components/ProgressStepper";
 import { useAuth } from '@/hooks/useAuth';
+
+// Extend Window interface for global file storage
+declare global {
+  interface Window {
+    aeromlRawFile?: File;
+    aeromlFileKey?: string;
+  }
+}
 
 interface DataRow {
   [key: string]: string | number;
@@ -51,7 +59,10 @@ interface ValidationResult {
   };
 }
 
-export default function DatasetUploadPage() {
+// Force dynamic rendering to avoid prerender errors with useSearchParams
+export const dynamic = 'force-dynamic';
+
+function DatasetUploadPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { userId } = useAuth();
@@ -99,7 +110,7 @@ export default function DatasetUploadPage() {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        let jsonData: any[][] = [];
+        let jsonData: unknown[][] = [];
         
         if (file.type === 'text/csv' || file.type === 'application/csv' || file.name.toLowerCase().endsWith('.csv')) {
           // Process CSV file
@@ -136,20 +147,27 @@ export default function DatasetUploadPage() {
           const worksheet = workbook.Sheets[worksheetName];
           
           // Convert to JSON
-          jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+          jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as unknown[][];
         }
         
         if (jsonData.length > 0) {
           // Extract headers from first row
-          const fileHeaders = jsonData[0].map((header: any, index: number) => 
+          const fileHeaders = jsonData[0].map((header: unknown, index: number) => 
             header?.toString() || `Column ${index + 1}`
           );
           
           // Convert remaining rows to objects
-          const rows = jsonData.slice(1).map((row: any[]) => {
+          const rows = jsonData.slice(1).map((row: unknown[]) => {
             const rowObj: DataRow = {};
             fileHeaders.forEach((header: string, index: number) => {
-              rowObj[header] = row[index] !== undefined ? row[index] : '';
+              const value = row[index];
+              if (value === null || value === undefined) {
+                rowObj[header] = '';
+              } else if (typeof value === 'number') {
+                rowObj[header] = value;
+              } else {
+                rowObj[header] = String(value);
+              }
             });
             return rowObj;
           });
@@ -304,9 +322,9 @@ export default function DatasetUploadPage() {
       
       // Store the actual file in a way that can be accessed by the training page
       // We'll use a global variable or a different approach
-      if (typeof window !== 'undefined') {
-        (window as any).aeromlRawFile = rawFileData;
-        (window as any).aeromlFileKey = fileKey;
+      if (typeof window !== 'undefined' && rawFileData) {
+        window.aeromlRawFile = rawFileData || undefined;
+        window.aeromlFileKey = fileKey;
       }
       
       // Navigate with just the key
@@ -315,7 +333,7 @@ export default function DatasetUploadPage() {
       console.error('Error preparing training data:', error);
       alert('Error preparing data for training. Please try again.');
     }
-  }, [validationResult, uploadedFile, prompt, headers, previewData, rawFileData, router]);
+  }, [validationResult, uploadedFile, prompt, rawFileData, router]);
 
   const clearUpload = useCallback(() => {
     setUploadedFile(null);
@@ -373,7 +391,9 @@ export default function DatasetUploadPage() {
   return (
     <div className="flex flex-col min-h-screen bg-black">
       {/* Nav Bar */}
-      <NavBar />
+      <Suspense fallback={<div className="h-16 bg-black/80 backdrop-blur-md border-b border-white/10" />}>
+        <NavBar />
+      </Suspense>
       
       <ProgressStepper currentStep={2} />
 
@@ -793,5 +813,23 @@ export default function DatasetUploadPage() {
       {/* Footer */}
       <Footer />
     </div>
+  );
+}
+
+export default function DatasetUploadPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col min-h-screen bg-black">
+        <Suspense fallback={<div className="h-16 bg-black/80 backdrop-blur-md border-b border-white/10" />}>
+          <NavBar />
+        </Suspense>
+        <div className="flex-grow flex items-center justify-center">
+          <div className="text-zinc-400">Loading...</div>
+        </div>
+        <Footer />
+      </div>
+    }>
+      <DatasetUploadPageContent />
+    </Suspense>
   );
 }

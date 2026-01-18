@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { useUser } from '@/contexts/UserContext';
@@ -8,8 +8,11 @@ import { useRouter } from 'next/navigation';
 import NavBar from "@/components/navbar/navbar";
 import Footer from "@/components/footer/footer";
 
+// Force dynamic rendering to avoid prerender errors
+export const dynamic = 'force-dynamic';
+
 export default function MyProfilePage() {
-  const { user, session, isAuthenticated, isLoading, authMethod, firstLetter } = useAuth();
+  const { user, isAuthenticated, isLoading, authMethod, firstLetter } = useAuth();
   const { setUser } = useUser();
   const router = useRouter();
 
@@ -33,13 +36,8 @@ export default function MyProfilePage() {
         fullName: user.full_name || '',
         email: user.email || '',
       });
-    } else if (session?.user) {
-        setFormData({
-            fullName: session.user.name || '',
-            email: session.user.email || '',
-        });
     }
-  }, [user, session]);
+  }, [user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,7 +77,9 @@ export default function MyProfilePage() {
 
   return (
     <div className="min-h-screen bg-[#080609] text-white flex flex-col">
-      <NavBar />
+      <Suspense fallback={<div className="h-16 bg-black/80 backdrop-blur-md border-b border-white/10" />}>
+        <NavBar />
+      </Suspense>
 
       <main className="flex-grow pt-24 pb-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-3xl mx-auto space-y-8 animate-float-in">
@@ -99,7 +99,7 @@ export default function MyProfilePage() {
                     <p className="text-zinc-500">{formData.email}</p>
                     <div className="pt-2">
                         <span className="inline-flex items-center rounded-full bg-blue-400/10 px-2.5 py-0.5 text-xs font-medium text-blue-400 ring-1 ring-inset ring-blue-400/20">
-                            {authMethod === 'google' ? 'Google Account' : 'Email Account'}
+                            {authMethod === 'email' ? 'Email Account' : 'Account'}
                         </span>
                     </div>
                 </div>

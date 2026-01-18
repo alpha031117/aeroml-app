@@ -19,7 +19,7 @@ const SignUp = () => {
     password: '',
     confirmPassword: '',
   });
-  const [providers, setProviders] = useState<any>(null);
+  const [providers, setProviders] = useState<Record<string, { id: string; name: string }> | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -197,7 +197,7 @@ const SignUp = () => {
 
         {/* Providers */}
         <div className="space-y-3">
-          {Object.values(providers).map((provider: any) => (
+          {Object.values(providers).map((provider: { id: string; name: string }) => (
             <Button
               key={provider.name}
               onClick={() => signIn(provider.id, { callbackUrl: '/model-prompt' })}

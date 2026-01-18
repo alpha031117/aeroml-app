@@ -1,14 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import Footer from "@/components/footer/footer";
 import NavBar from "@/components/navbar/navbar";
 import ProgressStepper from "@/components/ProgressStepper";
 import { PaperPlaneIcon } from "@radix-ui/react-icons";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
-import axios from 'axios'; // Import axios for making HTTP requests
 import { useRouter } from 'next/navigation'; // Import useRouter for navigation
 import { Button } from '@/components/ui';
+
+// Force dynamic rendering to avoid prerender errors
+export const dynamic = 'force-dynamic';
 
 // Placeholder suggestions
 const suggestions = [
@@ -40,7 +42,9 @@ export default function ModelPrompt() {
   return (
     <div className="flex flex-col min-h-screen overflow-y-hidden bg-black">
         {/* Nav Bar */}
-        <NavBar />
+        <Suspense fallback={<div className="h-16 bg-black/80 backdrop-blur-md border-b border-white/10" />}>
+          <NavBar />
+        </Suspense>
         
         {/* Progress Stepper - Step 1: Model Prompt */}
         <ProgressStepper currentStep={1} />

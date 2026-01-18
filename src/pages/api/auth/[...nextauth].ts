@@ -18,8 +18,29 @@
 // src/pages/api/auth/[...nextauth].ts
 
 import { NextApiRequest, NextApiResponse } from "next";
-import NextAuth from "next-auth";
+import NextAuth, { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
+import type { JWT } from "next-auth/jwt";
+import type { Session } from "next-auth";
+
+// Extend NextAuth types to include custom properties
+declare module "next-auth" {
+  interface Session {
+    user: {
+      id: string;
+      name?: string | null;
+      email?: string | null;
+      image?: string | null;
+    };
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    id?: string;
+    provider?: string;
+  }
+}
 
 // Build providers array conditionally - only include Google if credentials are available
 const providers = [];
@@ -42,7 +63,7 @@ if (providers.length === 0) {
   );
 }
 
-export const authOptions = {
+export const authOptions: NextAuthOptions = {
   providers,
   secret: process.env.NEXTAUTH_SECRET || process.env.JWT_SECRET, // Required for JWT encryption/decryption
   pages: {
@@ -61,16 +82,16 @@ export const authOptions = {
       }
       return token;
     },
-    async session({ session, token }) {
+    async session({ session, token }: { session: Session; token: JWT }) {
       // Handle session creation
-      if (token) {
+      if (token && session.user) {
         session.user = { 
           ...session.user, 
           id: token.id as string, // This is the token_id for Google auth
         };
         // Add provider info to session if needed
         if (token.provider) {
-          (session as any).provider = token.provider;
+          (session as Session & { provider?: string }).provider = token.provider as string;
         }
       }
       return session;
@@ -85,11 +106,15 @@ export const authOptions = {
   logger: {
     error(code, metadata) {
       // Suppress JWT_SESSION_ERROR for decryption failures (old tokens)
-      if (code === 'JWT_SESSION_ERROR' && 
-          (metadata?.error?.message?.includes('decryption operation failed') ||
-           metadata?.error?.name === 'JWEDecryptionFailed')) {
-        // Silently ignore - these are from old/invalid tokens that will be cleared
-        return;
+      if (code === 'JWT_SESSION_ERROR' && metadata) {
+        const error = metadata instanceof Error ? metadata : (metadata as { error?: Error })?.error;
+        if (error && (
+          (typeof error.message === 'string' && error.message.includes('decryption operation failed')) ||
+          error.name === 'JWEDecryptionFailed'
+        )) {
+          // Silently ignore - these are from old/invalid tokens that will be cleared
+          return;
+        }
       }
       // Log other errors normally
       console.error('[next-auth][error]', code, metadata);
@@ -123,10 +148,11 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     }
     
     return await NextAuth(req, res, authOptions);
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Handle JWT decryption errors gracefully
-    if (error?.message?.includes('decryption operation failed') || 
-        error?.name === 'JWEDecryptionFailed') {
+    const err = error as Error;
+    if ((err?.message && err.message.includes('decryption operation failed')) || 
+        err?.name === 'JWEDecryptionFailed') {
       // Clear the problematic session cookie
       res.setHeader('Set-Cookie', [
         'next-auth.session-token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; SameSite=Lax',
@@ -142,8 +168,8 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     }
     
     // Handle OAuth configuration errors
-    if (error?.message?.includes('client_id is required') || 
-        error?.message?.includes('clientId is required')) {
+    if ((err?.message && err.message.includes('client_id is required')) || 
+        (err?.message && err.message.includes('clientId is required'))) {
       console.error(
         '[NextAuth] OAuth provider configuration error. ' +
         'Please add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to .env.local'

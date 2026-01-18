@@ -30,3 +30,36 @@ export const buildApiUrl = (path: string): string => {
   return `${cleanBaseUrl}/${cleanPath}`;
 };
 
+/**
+ * Get headers that should be included with every API request
+ * Includes ngrok bypass header if using ngrok
+ */
+export const getApiHeaders = (): HeadersInit => {
+  const baseUrl = getApiBaseUrl();
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+  
+  // Add ngrok bypass header if using ngrok URL
+  if (baseUrl.includes('ngrok')) {
+    headers['ngrok-skip-browser-warning'] = 'true';
+  }
+  
+  return headers;
+};
+
+/**
+ * Custom fetch wrapper that automatically adds required headers
+ * Use this instead of fetch() for API calls
+ */
+export const apiFetch = async (url: string, options?: RequestInit): Promise<Response> => {
+  const headers = {
+    ...getApiHeaders(),
+    ...options?.headers,
+  };
+  
+  return fetch(url, {
+    ...options,
+    headers,
+  });
+};

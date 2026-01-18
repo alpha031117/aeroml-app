@@ -1,10 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import Footer from "@/components/footer/footer";
 import NavBar from "@/components/navbar/navbar";
 import { PaperPlaneIcon } from "@radix-ui/react-icons";
-import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useSearchParams, useRouter } from 'next/navigation';
 import TrainingDropdownTextarea from '@/components/training_textarea/TrainingDropdownTextarea';
 import Loader from '@/components/loader/loader';
@@ -12,6 +11,14 @@ import { Button } from '@/components/ui';
 import { Bot, FileText } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth'; // Import useAuth hook
 import ProgressStepper from "@/components/ProgressStepper";
+
+// Extend Window interface for global file storage
+declare global {
+  interface Window {
+    aeromlRawFile?: File;
+    aeromlFileKey?: string;
+  }
+}
 
 // Define the training log interface
 interface TrainingLog {
@@ -78,23 +85,8 @@ interface TrainingData {
   datasetInfo?: MinimalDatasetData; // Add dataset info to training data
 }
 
-export default function ModelTraining() {
-    const searchParams = useSearchParams();
-    const router = useRouter();
-    const { userId, isAuthenticated, isLoading: authLoading, authMethod } = useAuth(); // Use useAuth hook to get userId from both auth methods
-    const [isLoading, setIsLoading] = useState(true);
-    const [trainingData, setTrainingData] = useState<TrainingData | null>(null);
-    const [datasetData, setDatasetData] = useState<MinimalDatasetData | null>(null);
-    const [rawFile, setRawFile] = useState<File | null>(null);
-    const [isTraining, setIsTraining] = useState(false);
-    const [trainingLogs, setTrainingLogs] = useState<TrainingLog[]>([]);
-    const [trainingStatus, setTrainingStatus] = useState<'idle' | 'starting' | 'running' | 'completed' | 'failed'>('idle');
-    const [sessionId, setSessionId] = useState<string | null>(null);
-    
-
-
-    // Dummy training data
-    const dummyTrainingData: TrainingData = {
+// Dummy training data - moved outside component to avoid recreation on every render
+const dummyTrainingData: TrainingData = {
         summary: "Training a custom language model on aerospace engineering data with 10,000 samples",
         modelName: "AeroML-v1.0",
         datasetSize: 10000,
@@ -253,7 +245,23 @@ export default function ModelTraining() {
                 message: "Currently training epoch 15..."
             }
         ]
-    };
+};
+
+// Force dynamic rendering to avoid prerender errors with useSearchParams
+export const dynamic = 'force-dynamic';
+
+function ModelTrainingContent() {
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const { userId, isAuthenticated, isLoading: authLoading, authMethod } = useAuth(); // Use useAuth hook to get userId from both auth methods
+    const [isLoading, setIsLoading] = useState(true);
+    const [trainingData, setTrainingData] = useState<TrainingData | null>(null);
+    const [datasetData, setDatasetData] = useState<MinimalDatasetData | null>(null);
+    const [rawFile, setRawFile] = useState<File | null>(null);
+    const [isTraining, setIsTraining] = useState(false);
+    const [trainingLogs, setTrainingLogs] = useState<TrainingLog[]>([]);
+    const [trainingStatus, setTrainingStatus] = useState<'idle' | 'starting' | 'running' | 'completed' | 'failed'>('idle');
+    const [sessionId, setSessionId] = useState<string | null>(null);
 
     useEffect(() => {
         // Check for dataset data from dataset-upload page
@@ -271,11 +279,11 @@ export default function ModelTraining() {
               setDatasetData(parsedDataset);
               
               // Get the raw file from global variable
-              if (typeof window !== 'undefined' && (window as any).aeromlRawFile) {
-                setRawFile((window as any).aeromlRawFile);
+              if (typeof window !== 'undefined' && window.aeromlRawFile) {
+                setRawFile(window.aeromlRawFile);
                 // Clean up global variable
-                delete (window as any).aeromlRawFile;
-                delete (window as any).aeromlFileKey;
+                delete window.aeromlRawFile;
+                delete window.aeromlFileKey;
               }
               
               // Create training data based on real dataset
@@ -320,16 +328,16 @@ export default function ModelTraining() {
         } else if (datasetDataParam) {
           // Legacy method: Read from URL (kept for backward compatibility)
           try {
-            const parsedDataset: any = JSON.parse(decodeURIComponent(datasetDataParam));
+            const parsedDataset: MinimalDatasetData = JSON.parse(decodeURIComponent(datasetDataParam)) as MinimalDatasetData;
             setDatasetData(parsedDataset);
             
             // Create training data based on real dataset
             const realTrainingData: TrainingData = {
-              summary: `Training a machine learning model on ${parsedDataset.dataset.fileInfo.name} with ${parsedDataset.dataset.fileInfo.rows.toLocaleString()} samples for: ${parsedDataset.prompt}`,
-              modelName: `AeroML-${parsedDataset.dataset.fileInfo.name.split('.')[0]}`,
-              datasetSize: parsedDataset.dataset.fileInfo.rows,
+              summary: `Training a machine learning model on ${parsedDataset.fileInfo.name} with ${parsedDataset.fileInfo.rows.toLocaleString()} samples for: ${parsedDataset.prompt}`,
+              modelName: `AeroML-${parsedDataset.fileInfo.name.split('.')[0]}`,
+              datasetSize: parsedDataset.fileInfo.rows,
               currentEpoch: 1,
-              totalEpochs: Math.min(50, Math.max(10, Math.floor(parsedDataset.dataset.fileInfo.rows / 1000))), // Dynamic epochs based on dataset size
+              totalEpochs: Math.min(50, Math.max(10, Math.floor(parsedDataset.fileInfo.rows / 1000))), // Dynamic epochs based on dataset size
               estimatedTimeRemaining: "Calculating...",
               trainingLogs: [
                 {
@@ -340,7 +348,7 @@ export default function ModelTraining() {
                   accuracy: 0.0,
                   learningRate: 0.001,
                   status: 'running',
-                  message: `Starting training with ${parsedDataset.dataset.fileInfo.name}...`
+                  message: `Starting training with ${parsedDataset.fileInfo.name}...`
                 }
               ],
               datasetInfo: parsedDataset
@@ -354,7 +362,7 @@ export default function ModelTraining() {
           }
         } else if (sourcesDataParam) {
           try {
-            const parsed = JSON.parse(decodeURIComponent(sourcesDataParam));
+            JSON.parse(decodeURIComponent(sourcesDataParam));
             // For now, use dummy data instead of parsed sources data
             setTrainingData(dummyTrainingData);
           } catch (err) {
@@ -370,7 +378,7 @@ export default function ModelTraining() {
         setTimeout(() => {
           setIsLoading(false); // give it a bit of UX "smooth load"
         }, 600); // optional delay for fade-in effect
-      }, [searchParams]);
+      }, [searchParams]); // dummyTrainingData is constant, doesn't need to be in deps
 
     const startTraining = async () => {
         if (!datasetData || !rawFile) {
@@ -509,7 +517,17 @@ export default function ModelTraining() {
                             }
                             
                             try {
-                                const logEntry = JSON.parse(line);
+                                const logEntry = JSON.parse(line) as {
+                                    session_id?: string;
+                                    sessionId?: string;
+                                    session?: string;
+                                    id?: string;
+                                    epoch?: number;
+                                    loss?: number;
+                                    accuracy?: number;
+                                    learning_rate?: number;
+                                    message?: string;
+                                };
                                 
                                 // Extract session_id if present in the log entry (FINAL_RESULT format)
                                 if (logEntry.session_id) {
@@ -519,7 +537,7 @@ export default function ModelTraining() {
                                 
                                 // Also check for session_id in different possible locations
                                 if (!sessionId && (logEntry.sessionId || logEntry.session || logEntry.id)) {
-                                    const extractedId = logEntry.sessionId || logEntry.session || logEntry.id;
+                                    const extractedId = logEntry.sessionId || logEntry.session || logEntry.id || null;
                                     setSessionId(extractedId);
                                     console.log('Extracted session ID from alternative field:', extractedId);
                                 }
@@ -536,7 +554,7 @@ export default function ModelTraining() {
                                 };
                                 
                                 setTrainingLogs(prev => [...prev, newLog]);
-                            } catch (e) {
+                            } catch {
                                 // If not JSON, treat as plain text log and try to extract session ID
                                 
                                 // Extract session ID from various formats in the log line
@@ -627,22 +645,26 @@ export default function ModelTraining() {
         }
     };
 
-      if (isLoading || !trainingData) {
+    if (isLoading || !trainingData) {
         return (
           <div className="flex flex-col min-h-screen bg-black">
-            <NavBar />
+            <Suspense fallback={<div className="h-16 bg-black/80 backdrop-blur-md border-b border-white/10" />}>
+              <NavBar />
+            </Suspense>
             <div className="flex-grow flex items-center justify-center">
               <Loader />
             </div>
             <Footer />
           </div>
         );
-      }
+    }
 
     return (
         <div className="flex flex-col min-h-screen overflow-y-hidden bg-black">
             {/* Nav Bar */}
-            <NavBar />
+            <Suspense fallback={<div className="h-16 bg-black/80 backdrop-blur-md border-b border-white/10" />}>
+              <NavBar />
+            </Suspense>
             <ProgressStepper currentStep={3} />
             <div>
             <section className="w-full max-w-5xl mx-auto px-4 py-16 text-white flex-grow">
@@ -798,4 +820,22 @@ export default function ModelTraining() {
             <Footer />
         </div>
     );
+}
+
+export default function ModelTraining() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col min-h-screen bg-black">
+        <Suspense fallback={<div className="h-16 bg-black/80 backdrop-blur-md border-b border-white/10" />}>
+          <NavBar />
+        </Suspense>
+        <div className="flex-grow flex items-center justify-center">
+          <div className="text-zinc-400">Loading...</div>
+        </div>
+        <Footer />
+      </div>
+    }>
+      <ModelTrainingContent />
+    </Suspense>
+  );
 }

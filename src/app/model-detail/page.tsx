@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { buildApiUrl } from '@/lib/api';
@@ -13,11 +13,8 @@ import { Bot } from 'lucide-react';
 import {
   LineChart,
   Line,
-  AreaChart,
   Area,
   ComposedChart,
-  BarChart,
-  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -80,7 +77,10 @@ interface ModelPerformanceResponse {
   data_path: string;
 }
 
-export default function ModelDetail() {
+// Force dynamic rendering to avoid prerender errors with useSearchParams
+export const dynamic = 'force-dynamic';
+
+function ModelDetailContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const sessionId = searchParams?.get('session_id') || 'default';
@@ -233,7 +233,9 @@ export default function ModelDetail() {
   if (authLoading || loading) {
     return (
       <div className="flex flex-col min-h-screen bg-zinc-950 text-white">
-        <NavBar />
+        <Suspense fallback={<div className="h-16 bg-black/80 backdrop-blur-md border-b border-white/10" />}>
+          <NavBar />
+        </Suspense>
         <div className="flex-grow flex items-center justify-center">
           <div className="text-zinc-400">Loading model performance data...</div>
         </div>
@@ -245,19 +247,23 @@ export default function ModelDetail() {
   if (!userId) {
      return (
        <div className="flex flex-col min-h-screen bg-zinc-950 text-white">
-         <NavBar />
+         <Suspense fallback={<div className="h-16 bg-black/80 backdrop-blur-md border-b border-white/10" />}>
+           <NavBar />
+         </Suspense>
          <div className="flex-grow flex items-center justify-center">
            <div className="text-zinc-400">Please log in to view model performance</div>
          </div>
          <Footer />
        </div>
      );
-  }
+   }
 
   if (error === 'MODEL_NOT_FOUND') {
     return (
       <div className="flex flex-col min-h-screen bg-zinc-950 text-white">
-        <NavBar />
+        <Suspense fallback={<div className="h-16 bg-black/80 backdrop-blur-md border-b border-white/10" />}>
+          <NavBar />
+        </Suspense>
         <div className="flex-grow flex flex-col items-center justify-center p-6">
           <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mb-6">
             <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -266,7 +272,7 @@ export default function ModelDetail() {
           </div>
           <h1 className="text-2xl font-bold text-white mb-2">Model Data Not Found</h1>
           <p className="text-zinc-400 text-center max-w-md mb-8">
-            We couldn't find performance metrics for this session. This typically means the training process failed or didn't complete successfully.
+            We couldn&apos;t find performance metrics for this session. This typically means the training process failed or didn&apos;t complete successfully.
           </p>
           <div className="flex gap-4">
               <Link href="/model-history" className="px-4 py-2 rounded-lg border border-zinc-800 text-zinc-300 hover:bg-zinc-900 transition-colors">
@@ -285,7 +291,9 @@ export default function ModelDetail() {
   if (error) {
     return (
       <div className="flex flex-col min-h-screen bg-zinc-950 text-white">
-        <NavBar />
+        <Suspense fallback={<div className="h-16 bg-black/80 backdrop-blur-md border-b border-white/10" />}>
+          <NavBar />
+        </Suspense>
         <div className="flex-grow flex items-center justify-center">
           <div className="text-red-400">Error: {error}</div>
         </div>
@@ -297,7 +305,9 @@ export default function ModelDetail() {
   if (!data) {
     return (
       <div className="flex flex-col min-h-screen bg-zinc-950 text-white">
-        <NavBar />
+        <Suspense fallback={<div className="h-16 bg-black/80 backdrop-blur-md border-b border-white/10" />}>
+          <NavBar />
+        </Suspense>
         <div className="flex-grow flex items-center justify-center">
           <div className="text-zinc-400">No data available</div>
         </div>
@@ -318,7 +328,9 @@ export default function ModelDetail() {
 
   return (
     <div className="flex flex-col min-h-screen bg-zinc-950 text-white">
-      <NavBar />
+      <Suspense fallback={<div className="h-16 bg-black/80 backdrop-blur-md border-b border-white/10" />}>
+        <NavBar />
+      </Suspense>
       
       <div className="flex-grow max-w-7xl mx-auto px-6 py-8 w-full">
         {/* Section Title */}
@@ -531,14 +543,14 @@ export default function ModelDetail() {
             const top20Percent = chartData.find(d => d.cumulativeDataPercent >= 20);
 
             // Custom tooltip style for dark theme
-            const CustomTooltip = ({ active, payload, label }: any) => {
+            const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number; color: string; dataKey?: string }>; label?: string | number }) => {
               if (active && payload && payload.length) {
                 return (
                   <div className="bg-zinc-800 border border-zinc-700 rounded-lg p-3 shadow-lg">
                     <p className="text-white font-medium mb-2">
                       {typeof label === 'number' ? `Population: ${label.toFixed(1)}%` : `Group: ${label}`}
                     </p>
-                    {payload.map((entry: any, index: number) => (
+                    {payload.map((entry: { name: string; value: number; color: string; dataKey?: string }, index: number) => (
                       <p key={index} className="text-sm" style={{ color: entry.color }}>
                         {`${entry.name}: ${entry.value?.toFixed(2)}${entry.dataKey?.includes('Percent') || entry.dataKey?.includes('Rate') ? '%' : entry.dataKey?.includes('Gain') ? '%' : ''}`}
                       </p>
@@ -778,5 +790,23 @@ export default function ModelDetail() {
       {/* Footer */}
       <Footer />
     </div>
+  );
+}
+
+export default function ModelDetail() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col min-h-screen bg-zinc-950 text-white">
+        <Suspense fallback={<div className="h-16 bg-black/80 backdrop-blur-md border-b border-white/10" />}>
+          <NavBar />
+        </Suspense>
+        <div className="flex-grow flex items-center justify-center">
+          <div className="text-zinc-400">Loading...</div>
+        </div>
+        <Footer />
+      </div>
+    }>
+      <ModelDetailContent />
+    </Suspense>
   );
 }

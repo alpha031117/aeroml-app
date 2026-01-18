@@ -40,11 +40,12 @@ export default function SourcesLog({ sourcesData }: SourcesLogProps) {
     if (sources.length) {
       const text = sources
         .map((source) => {
+          const sourceItem = source as SourceItem;
           // Only generate timestamp on client side to avoid hydration mismatch
           const timestamp = typeof window !== 'undefined' 
             ? new Date().toLocaleTimeString('en-GB')
             : '';
-          return timestamp ? `${timestamp} - ${source.source} - ${source.url}` : `${source.source} - ${source.url}`;
+          return timestamp ? `${timestamp} - ${sourceItem.source} - ${sourceItem.url}` : `${sourceItem.source} - ${sourceItem.url}`;
         })
         .join('\n');
       setSourcesText(text);

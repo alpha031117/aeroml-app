@@ -7,7 +7,7 @@ import Image from 'next/image';
 import { faGoogle } from '@fortawesome/free-brands-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useUser } from '@/contexts/UserContext';
-import { buildApiUrl, getApiBaseUrl } from '@/lib/api';
+import { buildApiUrl, getApiBaseUrl, getApiHeaders } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 
 const SignIn = () => {
@@ -33,9 +33,7 @@ const SignIn = () => {
       
       const response = await fetch(apiUrl, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getApiHeaders(),
         body: JSON.stringify({
           email: credentials.email,
           password: credentials.password,
@@ -162,7 +160,7 @@ const SignIn = () => {
         </form>
 
         <div className="flex items-center justify-center mt-6 mb-6">
-          <p className="text-sm text-zinc-400">Don't have an account? </p> 
+          <p className="text-sm text-zinc-400">Don&apos;t have an account? </p> 
           <a href="/auth/signup" className="text-white hover:underline ml-2 font-medium">Sign up</a>
         </div>
 

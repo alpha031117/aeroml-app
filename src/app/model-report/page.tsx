@@ -1,11 +1,13 @@
 "use client";
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, Suspense } from "react";
 import { ChevronUpIcon, ChevronDownIcon, EyeIcon, ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { Loader2 } from "lucide-react";
 import NavBar from "@/components/navbar/navbar";
-import { Button } from "@/components/ui/button";
 import { buildApiUrl } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
+
+// Force dynamic rendering to avoid prerender errors
+export const dynamic = 'force-dynamic';
 
 // Type definition for model data
 interface ModelData {
@@ -152,7 +154,9 @@ export default function ModelReport() {
   return (
     <div className="min-h-screen bg-black text-neutral-100">
       {/* Navigation */}
-      <NavBar />
+      <Suspense fallback={<div className="h-16 bg-black/80 backdrop-blur-md border-b border-white/10" />}>
+        <NavBar />
+      </Suspense>
 
       {/* Main Content */}
       <main className="mx-auto max-w-7xl px-4 py-6">

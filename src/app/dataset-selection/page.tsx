@@ -1,11 +1,14 @@
 "use client";
-import React, { useMemo, useRef, useState } from "react";
+import React, { useMemo, useRef, useState, Suspense } from "react";
 import Loader from "@/components/loader/loader";
 import NavBar from "@/components/navbar/navbar";
 import Footer from "@/components/footer/footer";
 import { Icon, Button, StatCard, Badge, toCSV } from "@/components/ui";
 import { DatasetRow, ApiResponse } from "@/types/dataset";
 import Link from "next/link";
+
+// Force dynamic rendering to avoid prerender errors
+export const dynamic = 'force-dynamic';
 
 export default function Page() {
     // Custom scrollbar styles
@@ -164,7 +167,9 @@ export default function Page() {
     if (loading) {
         return (
             <main className="min-h-screen bg-black text-zinc-100">
-                <NavBar />
+                <Suspense fallback={<div className="h-16 bg-black/80 backdrop-blur-md border-b border-white/10" />}>
+                  <NavBar />
+                </Suspense>
                 <div className="mx-auto max-w-7xl px-5 pb-16 pt-6">
                     <div className="flex items-center justify-center py-20">
                         <Loader />
@@ -178,7 +183,9 @@ export default function Page() {
     if (error) {
         return (
             <main className="min-h-screen bg-black text-zinc-100">
-                <NavBar />
+                <Suspense fallback={<div className="h-16 bg-black/80 backdrop-blur-md border-b border-white/10" />}>
+                  <NavBar />
+                </Suspense>
                 <div className="mx-auto max-w-7xl px-5 pb-16 pt-6">
                     <div className="flex items-center justify-center py-20">
                         <div className="text-center">
@@ -202,7 +209,9 @@ export default function Page() {
     return (
         <main className="min-h-screen bg-black text-zinc-100">
             <style dangerouslySetInnerHTML={{ __html: scrollbarStyles }} />
-            <NavBar />
+            <Suspense fallback={<div className="h-16 bg-black/80 backdrop-blur-md border-b border-white/10" />}>
+              <NavBar />
+            </Suspense>
             <div className="mx-auto max-w-7xl px-5 pb-16 pt-6">
                 {/* Top bar */}
                 <div className="mb-6 flex flex-wrap items-center justify-between gap-3">

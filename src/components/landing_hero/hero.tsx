@@ -2,7 +2,6 @@ import { PaperPlaneIcon } from "@radix-ui/react-icons";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 
 const Hero = () => {
     const { ref, show } = useScrollReveal();

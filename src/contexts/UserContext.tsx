@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from 'react';
-import { buildApiUrl } from '@/lib/api';
+import { buildApiUrl, getApiHeaders } from '@/lib/api';
 
 interface User {
   id: string;
@@ -55,6 +55,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         const meUrl = buildApiUrl("/api/v1/users/me");
         const response = await fetch(meUrl, {
           method: "GET",
+          headers: getApiHeaders(),
           credentials: "include", // send HttpOnly JWT cookie to FastAPI
         });
 

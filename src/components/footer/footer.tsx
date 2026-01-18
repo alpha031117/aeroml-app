@@ -1,4 +1,3 @@
-import { Mail } from 'lucide-react';
 
 interface FooterProps {
   isLandingPage?: boolean;

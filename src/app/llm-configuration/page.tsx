@@ -1,12 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Footer from "@/components/footer/footer";
 import NavBar from "@/components/navbar/navbar";
 import { Button } from '@/components/ui';
 import Image from 'next/image';
 import { useAuth } from '@/hooks/useAuth';
 import { buildApiUrl } from '@/lib/api';
+
+// Force dynamic rendering to avoid prerender errors
+export const dynamic = 'force-dynamic';
 
 interface LLMConfig {
     id: string;
@@ -103,7 +106,7 @@ export default function LLMConfiguration() {
 
         try {
             // Build request body - only include API key if it's provided
-            const requestBody: any = {
+            const requestBody: Record<string, unknown> = {
                 user_id: userId,
                 model_name: model,
                 max_runtime_secs: maxRuntimeSecs,
@@ -151,7 +154,9 @@ export default function LLMConfiguration() {
     if (authLoading || isLoading) {
         return (
             <div className="flex flex-col min-h-screen bg-black text-white">
-                <NavBar />
+                <Suspense fallback={<div className="h-16 bg-black/80 backdrop-blur-md border-b border-white/10" />}>
+                  <NavBar />
+                </Suspense>
                 <div className="flex-grow flex items-center justify-center">
                     <div className="animate-pulse">Loading...</div>
                 </div>
@@ -162,7 +167,9 @@ export default function LLMConfiguration() {
 
     return (
         <div className="flex flex-col min-h-screen bg-black text-white">
-            <NavBar />
+            <Suspense fallback={<div className="h-16 bg-black/80 backdrop-blur-md border-b border-white/10" />}>
+              <NavBar />
+            </Suspense>
             <div className="flex-grow">
                 <section className="w-full max-w-3xl mx-auto px-4 py-16">
                     <div className="mb-8">
@@ -205,7 +212,7 @@ export default function LLMConfiguration() {
                                 <input
                                     type="password"
                                     value={apiKey}
-                                    onFocus={(e) => {
+                                    onFocus={() => {
                                         // Clear masked value when user focuses to enter new key
                                         if (hasExistingKey && apiKey === '*********') {
                                             setApiKey('');
